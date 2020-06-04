@@ -1,0 +1,90 @@
+#################################
+#   F07 - PROD (NOVO ODA X7)    #
+#################################
+EPOCA = 
+ (DESCRIPTION = 
+  (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+  (LOAD_BALANCE = YES)
+  (CONNECT_DATA = 
+   (SERVER = DEDICATED)
+   (SERVICE_NAME = epoca.epoca.dc)
+   (FAILOVER_MODE = 
+   (TYPE = SELECT)(METHOD = BASIC)(RETRIES = 180)(DELAY = 5)
+   )
+  )
+ )
+
+EPC = 
+ (DESCRIPTION = 
+  (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+  (LOAD_BALANCE = YES)
+  (CONNECT_DATA = 
+   (SERVER = DEDICATED)
+   (SERVICE_NAME = epoca.epoca.dc)
+   (FAILOVER_MODE = 
+   (TYPE = SELECT)(METHOD = BASIC)(RETRIES = 180)(DELAY = 5)
+   )
+  )
+ )
+
+TESTE-EPOCA =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = EPOCATST.epoca.dc)
+    )
+  )
+
+MRURAL = 
+ (DESCRIPTION = 
+  (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+  (LOAD_BALANCE = YES)
+  (CONNECT_DATA = 
+   (SERVER = DEDICATED)
+   (SERVICE_NAME = minasrural.epoca.dc)
+   (FAILOVER_MODE = 
+   (TYPE = SELECT)(METHOD = BASIC)(RETRIES = 180)(DELAY = 5)
+   )
+  )
+ )
+
+MINR = 
+ (DESCRIPTION = 
+  (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+  (LOAD_BALANCE = YES)
+  (CONNECT_DATA = 
+   (SERVER = DEDICATED)
+   (SERVICE_NAME = minasrural.epoca.dc)
+   (FAILOVER_MODE = 
+   (TYPE = SELECT)(METHOD = BASIC)(RETRIES = 180)(DELAY = 5)
+   )
+  )
+ )
+
+FUTURA = 
+ (DESCRIPTION = 
+  (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+  (LOAD_BALANCE = YES)
+  (CONNECT_DATA = 
+   (SERVER = DEDICATED)
+   (SERVICE_NAME = futura.epoca.dc)
+   (FAILOVER_MODE = 
+   (TYPE = SELECT)(METHOD = BASIC)(RETRIES = 180)(DELAY = 5)
+   )
+  )
+ )
+
+
+SENIOR = 
+ (DESCRIPTION = 
+  (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
+  (LOAD_BALANCE = YES)
+  (CONNECT_DATA = 
+   (SERVER = DEDICATED)
+   (SERVICE_NAME = senior.epoca.dc)
+   (FAILOVER_MODE = 
+   (TYPE = SELECT)(METHOD = BASIC)(RETRIES = 180)(DELAY = 5)
+   )
+  )
+)
