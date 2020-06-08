@@ -42,10 +42,10 @@ namespace ProjetoColetorApi.Model
 
                 OracleCommand cmd = con.CreateCommand();
 
-                query.Append("SELECT P.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM as DESCRICAO, P.QTUNITCX, P.EMBALAGEM, PF.LASTROPAL AS LASTRO, PF.ALTURAPAL AS CAMADA ");
+                query.Append("SELECT P.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM as DESCRICAO, P.QTUNITCX");
                 query.Append("  FROM PCPRODUT P INNER JOIN PCPRODFILIAL PF ON (P.CODPROD = PF.CODPROD)");
-                query.Append($" WHERE((P.CODPROD = {produto}) OR (P.CODAUXILIAR = {produto}) OR (P.CODAUXILIAR2 = {produto})) ");
-                query.Append($"   AND PF.CODFILIAL = {filial}");
+                query.Append($"WHERE ((P.CODPROD = {produto}) OR (P.CODAUXILIAR = {produto}) OR (P.CODAUXILIAR2 = {produto})) ");
+                query.Append($"  AND PF.CODFILIAL = {filial}");
 
                 cmd.CommandText = query.ToString();
                 OracleDataReader reader = cmd.ExecuteReader();
@@ -55,9 +55,6 @@ namespace ProjetoColetorApi.Model
                     pl.Codprod = reader.GetInt32(0);
                     pl.Descricao = reader.GetString(1);
                     pl.Qtunitcx = reader.GetInt32(2);
-                    pl.Embalagem = reader.GetString(3);
-                    pl.Lastro = reader.GetInt32(4);
-                    pl.Camada = reader.GetInt32(5);
                     pl.Erro = "N";
                     pl.Warning = "N";
                     pl.MensagemErroWarning = null;
@@ -146,74 +143,30 @@ namespace ProjetoColetorApi.Model
         public string Erro { get; set; }
         public string Warning { get; set; }
         public string MensagemErroWarning { get; set; }
-        public EnderecoInventario getDadosEndereco(int codEndereco)
-        {
-            StringBuilder query = new StringBuilder();
-
-            EnderecoInventario end = new EnderecoInventario();
-
-            try
-            {
-                OracleConnection con = DataBase.novaConexao();
-
-                OracleCommand cmd = con.CreateCommand();
-
-                query.Append($"select to_number(codendereco) as codendereco, tipoender, deposito, rua, predio, nivel, apto from pcendereco where codendereco = {codEndereco}");
-
-                cmd.CommandText = query.ToString();
-                OracleDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
-                {
-                    end.Codigo = reader.GetInt32(0);
-                    end.TipoEndereco = reader.GetString(1);
-                    end.Deposito = reader.GetInt32(2);
-                    end.Rua = reader.GetInt32(3);
-                    end.Predio = reader.GetInt32(4);
-                    end.Nivel = reader.GetInt32(5);
-                    end.Apto= reader.GetInt32(6);
-                    end.Erro = "N";
-                    end.Warning = "N";
-
-                }
-                else
-                {
-                    end.Warning = "S";
-                    end.MensagemErroWarning = "Nenhum endereço encontrado!";
-                }
-
-                con.Close();
-
-                return end;
-            }
-            catch (Exception e)
-            {
-                end.MensagemErroWarning = e.Message;
-
-                return end;
-            }
-
-        }
 
         public DataTable getProxOs(string codUsuario, int codEndereco, int contagem)
         {
-            DataTable endereco = new DataTable();
+            OracleConnection connection = DataBase.novaConexao();
+
             string proxOs;
+            int minimaContagem;
+            DataTable endereco = new DataTable();
 
             StringBuilder query = new StringBuilder();
+            OracleCommand exec = connection.CreateCommand();
+
 
             try
             {
-                OracleConnection con = DataBase.novaConexao();
+                OracleTransaction transacao = connection.BeginTransaction();
+                exec.Transaction = transacao;
 
-                OracleCommand cmd = con.CreateCommand();
-
-                // query.Append($"select fnc_busca_prox_os_invent({codUsuario}) as endereco from dual");
+                //query.Append($"select fnc_busca_prox_os_invent({codUsuario}) as endereco from dual");
                 // Para testar, comentar a linha de cima e descomentar a debaixo
                 query.Append("select to_char(45947) as inventos from dual");
 
-                cmd.CommandText = query.ToString();
-                OracleDataReader reader = cmd.ExecuteReader();
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
 
                 if (reader.Read())
                 {
@@ -225,22 +178,51 @@ namespace ProjetoColetorApi.Model
                     }
                     else
                     {
-                        StringBuilder queryOs = new StringBuilder(); 
-                        OracleCommand os = con.CreateCommand();
+                        query = new StringBuilder();
 
-                        queryOs.Append($"select * from (");
-                        queryOs.Append($"               select inv.numinvent, inv.codprod, nvl(inv.qt, 0) as qt, inv.contagem, min(contagem) over(partition by inv.codendereco, inv.codprod) as contagem_minima, inv.status, en.codendereco, en.tipoender, en.deposito, en.rua, en.predio, en.nivel, en.apto");
-                        queryOs.Append($"                 from pcinventenderecoi inv inner join pcendereco en on (inv.codendereco = en.codendereco)");
-                        queryOs.Append($"                where inv.inventos = {proxOs} and inv.status = 'D' and nvl(inv.qt, 0) = 0");
-                        queryOs.Append($"                order by en.deposito, en.rua, case when mod(en.rua, 2) = 0 then en.predio end asc, case when mod(en.rua, 2) = 1 then en.predio end desc, en.nivel, en.apto, inv.codprod, inv.codendereco, inv.contagem");
-                        queryOs.Append($"               )");
-                        queryOs.Append($" where contagem = contagem_minima");
+                        query.Append($"SELECT MIN(CONTAGEM) as contagem FROM pcinventenderecoi inv WHERE inv.inventos = {proxOs} AND inv.status = 'D' AND nvl(inv.qt, 0) = 0");
 
-                        os.CommandText = queryOs.ToString();
-                        OracleDataAdapter oda = new OracleDataAdapter(os);
-                        oda.SelectCommand = os;
+                        exec.CommandText = query.ToString();
+                        reader = exec.ExecuteReader();
+
+                        if (reader.Read())
+                        {
+                            minimaContagem = reader.GetInt32(0);
+
+                            query = new StringBuilder();
+
+                            query.Append($"UPDATE EPCTI.PCINVENTENDERECOI SET MATCONT  = {codUsuario} WHERE INVENTOS = {proxOs} AND CONTAGEM = {minimaContagem} AND DTCONTINI IS NULL");
+
+                            exec.CommandText = query.ToString();
+                            reader = exec.ExecuteReader();
+                        }
+                        else
+                        {
+                            minimaContagem = -1;
+                        }
+
+                        query = new StringBuilder();
+
+                        query.Append($"select numinvent, inventos, codprod, descricao, contagem, status, codendereco, tipoender, deposito, rua, predio, nivel, apto, qtunitcx");
+                        query.Append($"  from (select inv.numinvent, inv.inventos, inv.codprod, prod.descricao, nvl(inv.qt, 0) as qt, inv.contagem, inv.status,");
+                        query.Append($"               min(contagem) over (partition by inv.codendereco, inv.codprod) as contagem_minima, en.codendereco, en.tipoender,");
+                        query.Append($"               en.deposito, en.rua, en.predio, en.nivel, en.apto, prod.qtunitcx");
+                        query.Append($"          from pcinventenderecoi inv inner join pcendereco en on (inv.codendereco = en.codendereco)");
+                        query.Append($"                                     inner join pcprodut prod on (inv.codprod = prod.codprod)");
+                        query.Append($"         where inv.inventos = {proxOs} and inv.status = 'D' and nvl(inv.qt, 0) = 0");
+                        query.Append($"         order by en.deposito, en.rua, case when mod(en.rua, 2) = 0 then en.predio end asc, case when mod(en.rua, 2) = 1 then en.predio end desc, ");
+                        query.Append($"                  en.nivel, en.apto, inv.codprod, inv.codendereco, inv.contagem");
+                        query.Append($"        )");
+                        query.Append($" where contagem = contagem_minima");
+
+                        exec.CommandText = query.ToString();
+                        OracleDataAdapter oda = new OracleDataAdapter(exec);
+                        oda.SelectCommand = exec;
                         oda.Fill(endereco);
-                        con.Close();
+
+
+                        transacao.Commit();
+                        connection.Close();
 
                         return endereco;
                     }
@@ -248,9 +230,26 @@ namespace ProjetoColetorApi.Model
 
                 return null;
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                throw e;
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+                throw ex;
+
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+
             }
 
         }

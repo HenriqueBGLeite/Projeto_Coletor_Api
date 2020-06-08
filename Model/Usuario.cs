@@ -70,6 +70,7 @@ namespace ProjetoColetorApi.Model
                 {
                     usuario.Filial = reader.GetInt32(0);
                     usuario.Code = reader.GetInt32(1);
+                    usuario.Password = "";
                     usuario.Nome = reader.GetString(2);
                     usuario.TipoConferencia = reader.GetString(3);
                     usuario.PermiteFecharBonus = reader.GetString(4);

@@ -32,12 +32,6 @@ namespace ProjetoColetorApi.Controllers
             return Json(new EnderecoInventario().getProxOs(codUsuario, codEndereco, contagem));
         }
 
-        [Route("{codEndereco}")]
-        public JsonResult getDadosEndereco(int codEndereco)
-        {
-            return Json(new EnderecoInventario().getDadosEndereco(codEndereco));
-        }
-
         //MÉTODOS PARA INVENTARIO SEM WMS (MRURAL)
         [Route("{codFilial}/{codUsuario}")]
         public int getInventario(int codFilial, int codUsuario)
