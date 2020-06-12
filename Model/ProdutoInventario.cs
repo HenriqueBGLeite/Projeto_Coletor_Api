@@ -10,8 +10,14 @@ namespace ProjetoColetorApi.Model
 {
     public class ProdutoInventario
     {
+        public int NumInvent { get; set; }
+        public int InventOs { get; set; }
+        public int CodEndereco { get; set; }
+        public int MatDig { get; set; }
+        public string Status { get; set; }
         public int Codprod { get; set; }
         public string Descricao { get; set; }
+        public int Contagem { get; set; }
         public int Qtunitcx { get; set; }
         public string Embalagem { get; set; }
         public int? Lastro { get; set; }
@@ -28,27 +34,22 @@ namespace ProjetoColetorApi.Model
         //MÉTODOS PARA INVENTARIO COM WMS
         public ProdutoInventario getProduto(string produto, int filial)
         {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
 
             ProdutoInventario produtoInventario = new ProdutoInventario();
-
             StringBuilder query = new StringBuilder();
-
             ProdutoInventario pl = new ProdutoInventario();
 
             try
             {
-
-                OracleConnection con = DataBase.novaConexao();
-
-                OracleCommand cmd = con.CreateCommand();
-
                 query.Append("SELECT P.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM as DESCRICAO, P.QTUNITCX");
                 query.Append("  FROM PCPRODUT P INNER JOIN PCPRODFILIAL PF ON (P.CODPROD = PF.CODPROD)");
                 query.Append($"WHERE ((P.CODPROD = {produto}) OR (P.CODAUXILIAR = {produto}) OR (P.CODAUXILIAR2 = {produto})) ");
                 query.Append($"  AND PF.CODFILIAL = {filial}");
 
-                cmd.CommandText = query.ToString();
-                OracleDataReader reader = cmd.ExecuteReader();
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
 
                 if (reader.Read())
                 {
@@ -68,34 +69,49 @@ namespace ProjetoColetorApi.Model
                     produtoInventario = pl;
                 }
 
-                con.Close();
+                connection.Close();
 
                 return pl;
 
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
+                if (connection.State == ConnectionState.Open)
+                {
+                    pl.Erro = "S";
+                    pl.MensagemErroWarning = ex.Message;
 
-                pl.Erro = "S";
-                pl.MensagemErroWarning = e.Message;
+                    produtoInventario = pl;
 
-                produtoInventario = pl;
+                    connection.Close();
+                    return produtoInventario;
+                }
+                exec.Dispose();
+                connection.Dispose();
+                throw ex;
 
-                return produtoInventario;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+
             }
 
         }
         public Boolean gravaProduto(ProdutoInventario prod)
         {
             Boolean salvou = false;
+            OracleConnection connection = DataBase.novaConexao();
             StringBuilder query = new StringBuilder();
+            OracleCommand exec = new OracleCommand("STP_GERA_PROX_CONTAGEM", connection);
 
             try
             {
-                OracleConnection con = DataBase.novaConexao();
-
-                OracleCommand cmd = con.CreateCommand();
-
                 string dtvalidade = null;
 
                 dtvalidade = Convert.ToDateTime(prod.Datavalidade).ToString("dd-MM-yyyy");
@@ -106,25 +122,51 @@ namespace ProjetoColetorApi.Model
                 if (prod.Qtun == null) { prod.Qtun = 0; }
                 if (prod.Qtcx == null) { prod.Qtcx = 0; }
 
-                //INSERT 
-                query.Append("INSERT INTO EPCTI.TAB_PROJETO_COLETOR_INVENTARIO (CODPROD, DESCRICAO, QTUNITCX, EMBALAGEM, LASTRO, CAMADA, DTVALIDADE, QTCX, QTUN, TOTAL)");
-                query.Append($"VALUES ({prod.Codprod}, SUBSTR('{prod.Descricao}', 1,40),{prod.Qtunitcx}, '{prod.Embalagem}', nvl({prod.Lastro},0), nvl({prod.Camada},0),");
-                query.Append($"TO_DATE('{dtvalidade}','DD-MM-YYYY'),{prod.Qtcx},{prod.Qtun},{prod.Total})");
+                exec.CommandType = CommandType.StoredProcedure;
 
+                exec.Parameters.Add("P_NUMINVENT", OracleDbType.Int32).Value = prod.NumInvent;
+                exec.Parameters.Add("P_INVENTOS", OracleDbType.Int32).Value = prod.InventOs;
+                exec.Parameters.Add("P_CODPROD", OracleDbType.Int32).Value = prod.Codprod;
+                exec.Parameters.Add("P_QTTOTAL", OracleDbType.Int32).Value = prod.Total;
+                exec.Parameters.Add("P_QTUND", OracleDbType.Int32).Value = prod.Qtun;
+                exec.Parameters.Add("P_QTCX", OracleDbType.Int32).Value = prod.Qtcx;
+                exec.Parameters.Add("P_ENDERECO", OracleDbType.Int32).Value = prod.CodEndereco;
+                exec.Parameters.Add("P_CONTAGEM", OracleDbType.Int32).Value = prod.Contagem;
+                exec.Parameters.Add("P_DTVALIDADE", OracleDbType.Varchar2).Value = prod.Datavalidade;
+                exec.Parameters.Add("P_MATDIG", OracleDbType.Int32).Value = prod.MatDig;
+                exec.Parameters.Add("P_STATUS", OracleDbType.Varchar2).Value = prod.Status;
+                exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = false;
 
-                cmd.CommandText = query.ToString();
-                OracleDataReader reader = cmd.ExecuteReader();
+                exec.ExecuteNonQuery();
+
+                connection.Close();
 
                 salvou = true;
 
-                con.Close();
+                return salvou;
+            }
+            catch (Exception ex)
+            {
+                salvou = false;
+
+                
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
 
                 return salvou;
             }
-            catch (Exception)
+            finally
             {
-                salvou = false;
-                return salvou;
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
             }
 
         }
@@ -180,7 +222,7 @@ namespace ProjetoColetorApi.Model
                     {
                         query = new StringBuilder();
 
-                        query.Append($"SELECT MIN(CONTAGEM) as contagem FROM pcinventenderecoi inv WHERE inv.inventos = {proxOs} AND inv.status = 'D' AND nvl(inv.qt, 0) = 0");
+                        query.Append($"SELECT NVL(MIN(CONTAGEM), -1) as contagem FROM pcinventenderecoi inv WHERE inv.inventos = {proxOs} AND inv.status IN ('E', 'D') AND nvl(inv.qt, 0) = 0");
 
                         exec.CommandText = query.ToString();
                         reader = exec.ExecuteReader();
@@ -209,7 +251,7 @@ namespace ProjetoColetorApi.Model
                         query.Append($"               en.deposito, en.rua, en.predio, en.nivel, en.apto, prod.qtunitcx");
                         query.Append($"          from pcinventenderecoi inv inner join pcendereco en on (inv.codendereco = en.codendereco)");
                         query.Append($"                                     inner join pcprodut prod on (inv.codprod = prod.codprod)");
-                        query.Append($"         where inv.inventos = {proxOs} and inv.status = 'D' and nvl(inv.qt, 0) = 0");
+                        query.Append($"         where inv.inventos = {proxOs} and inv.status in ('E', 'D') and nvl(inv.qt, 0) = 0");
                         query.Append($"         order by en.deposito, en.rua, case when mod(en.rua, 2) = 0 then en.predio end asc, case when mod(en.rua, 2) = 1 then en.predio end desc, ");
                         query.Append($"                  en.nivel, en.apto, inv.codprod, inv.codendereco, inv.contagem");
                         query.Append($"        )");
@@ -238,8 +280,8 @@ namespace ProjetoColetorApi.Model
                 }
                 exec.Dispose();
                 connection.Dispose();
-                throw ex;
 
+                return null;
             }
             finally
             {
@@ -249,7 +291,6 @@ namespace ProjetoColetorApi.Model
                 }
                 exec.Dispose();
                 connection.Dispose();
-
             }
 
         }
