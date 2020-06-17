@@ -27,7 +27,7 @@ namespace ProjetoColetorApi.Controllers
         }
 
         [Route("{codUsuario}/{codEndereco?}/{contagem?}")]
-        public JsonResult getProxOs(string codUsuario, int codEndereco, int contagem)
+        public JsonResult getProxOs(string codUsuario, int codEndereco = -1, int contagem = 1)
         {
             return Json(new EnderecoInventario().getProxOs(codUsuario, codEndereco, contagem));
         }
