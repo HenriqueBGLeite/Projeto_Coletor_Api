@@ -1,6 +1,7 @@
 ﻿using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,52 +10,36 @@ namespace ProjetoColetorApi.Model
 {
     public class ProdutoColetor
     {
-        private int codfilial;
-        private int codprod;
-        private string descricao;
-        private string embalagemmaster;
-        private string unidademaster;
-        private int qtcx;
-        private Int64 dun;
-        private string embalagem;
-        private string unidade;
-        private int qtunit;
-        private Int64 ean;
-        private int alt;
-        private int larg;
-        private int comp;
-        private double peso;
-        private int lastro;
-        private int camada;
-        private int total;
+        public int Codfilial { get; set; }
+        public int Codprod { get; set; }
+        public string Descricao { get; set; }
+        public string Embalagemmaster { get; set; }
+        public string Unidademaster { get; set; }
+        public int Qtcx { get; set; }
+        public Int64 Dun { get; set; }
+        public string Embalagem { get; set; }
+        public string Unidade { get; set; }
+        public int Qtunit { get; set; }
+        public Int64 Ean { get; set; }
+        public int Alt { get; set; }
+        public int Larg { get; set; }
+        public int Comp { get; set; }
+        public int AltUn { get; set; }
+        public int LargUn { get; set; }
+        public int CompUn { get; set; }
+        public int Lastro { get; set; }
+        public int Camada { get; set; }
+        public int Total { get; set; }
+        public double Peso { get; set; }
+        public double PesoUn { get; set; }
+        public int Capacidade { get; set; }
+        public int Reposicao { get; set; }
+        public int PrazoValidade { get; set; }
+        public int ShelfLife { get; set; }
 
-        private string erro;
-        private string warning;
-        private string mensagemErroWarning;
-
-
-        public int Codfilial { get => codfilial; set => codfilial = value; }
-        public int Codprod { get => codprod; set => codprod = value; }
-        public string Descricao { get => descricao; set => descricao = value; }
-        public string Embalagemmaster { get => embalagemmaster; set => embalagemmaster = value; }
-        public string Unidademaster { get => unidademaster; set => unidademaster = value; }
-        public int Qtcx { get => qtcx; set => qtcx = value; }
-        public Int64 Dun { get => dun; set => dun = value; }
-        public string Embalagem { get => embalagem; set => embalagem = value; }
-        public string Unidade { get => unidade; set => unidade = value; }
-        public int Qtunit { get => qtunit; set => qtunit= value; }
-        public Int64 Ean { get => ean; set => ean = value; }
-        public int Alt { get => alt; set => alt = value; }
-        public int Larg { get => larg; set => larg = value; }
-        public int Comp { get => comp; set => comp = value; }
-        public int Lastro { get => lastro; set => lastro = value; }
-        public int Camada { get => camada; set => camada = value; }
-        public int Total { get => total; set => total = value; }
-        public double Peso { get => peso; set => peso = value; }
-
-        public string Erro { get => erro; set => erro = value; }
-        public string Warning { get => warning; set => warning = value; }
-        public string MensagemErroWarning { get => mensagemErroWarning; set => mensagemErroWarning = value; }
+        public string Erro { get; set; }
+        public string Warning { get; set; }
+        public string MensagemErroWarning { get; set; }
 
         public Boolean editaDados(ProdutoColetor prod)
         {
@@ -69,23 +54,23 @@ namespace ProjetoColetorApi.Model
                 OracleCommand cmd = con.CreateCommand();
 
                 //CALCULA VOL. MASTER
-                decimal volumeMaster = ((Convert.ToDecimal(prod.alt) * Convert.ToDecimal(prod.larg) * Convert.ToDecimal(prod.comp)) / 1000000);
-                decimal volumeUnit = (volumeMaster / prod.qtcx);
+                decimal volumeMaster = ((Convert.ToDecimal(prod.Alt) * Convert.ToDecimal(prod.Larg) * Convert.ToDecimal(prod.Comp)) / 1000000);
+                decimal volumeUnit = (volumeMaster / prod.Qtcx);
                 //CALCULA PESO UNITARIO
-                double pesoUnit = (prod.peso / prod.qtcx);
+                double pesoUnit = (prod.Peso / prod.Qtcx);
 
                 //UPDATE PCPRODUT 
-                pcprodut.Append($"UPDATE PCPRODUT SET CODAUXILIAR = {prod.ean}, CODAUXILIAR2 = {prod.dun}, ALTURAARM = {prod.alt}, LARGURAARM = {prod.larg}, ");
-                pcprodut.Append($"COMPRIMENTOARM = {prod.comp}, VOLUMEARM = {volumeMaster.ToString().Replace(",", ".")}, PESOLIQMASTER = {prod.peso.ToString().Replace(",", ".")}, PESOBRUTOMASTER = {prod.peso.ToString().Replace(",", ".")}, ");
+                pcprodut.Append($"UPDATE PCPRODUT SET CODAUXILIAR = {prod.Ean}, CODAUXILIAR2 = {prod.Dun}, ALTURAARM = {prod.Alt}, LARGURAARM = {prod.Larg}, ");
+                pcprodut.Append($"COMPRIMENTOARM = {prod.Comp}, VOLUMEARM = {volumeMaster.ToString().Replace(",", ".")}, PESOLIQMASTER = {prod.Peso.ToString().Replace(",", ".")}, PESOBRUTOMASTER = {prod.Peso.ToString().Replace(",", ".")}, ");
                 pcprodut.Append($"VOLUME = {volumeUnit.ToString().Replace(",", ".")}, PESOLIQ = ROUND({pesoUnit.ToString().Replace(",", ".")},4), PESOBRUTO = ROUND({pesoUnit.ToString().Replace(",", ".")},4) ");
-                pcprodut.Append($" where codprod = {prod.codprod}");
+                pcprodut.Append($" where codprod = {prod.Codprod}");
 
                 cmd.CommandText = pcprodut.ToString();
                 OracleDataReader produt = cmd.ExecuteReader();
 
                 //UPDATE PCPRODFILIAL
-                pcprodfilial.Append($"UPDATE PCPRODFILIAL SET LASTROPAL = {prod.lastro}, ALTURAPAL = {prod.camada}, QTTOTPAL = ({prod.lastro}*{prod.camada})");
-                pcprodfilial.Append($" WHERE CODPROD = {prod.codprod} AND CODFILIAL = {prod.codfilial}");
+                pcprodfilial.Append($"UPDATE PCPRODFILIAL SET LASTROPAL = {prod.Lastro}, ALTURAPAL = {prod.Camada}, QTTOTPAL = ({prod.Lastro}*{prod.Camada})");
+                pcprodfilial.Append($" WHERE CODPROD = {prod.Codprod} AND CODFILIAL = {prod.Codfilial}");
 
                 cmd.CommandText = pcprodfilial.ToString();
                 OracleDataReader reader = cmd.ExecuteReader();
@@ -107,84 +92,104 @@ namespace ProjetoColetorApi.Model
         public ProdutoColetor getProduto(string produto, int filial)
         {
 
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+
             ProdutoColetor produtoColetor = new ProdutoColetor();
+            ProdutoColetor p = new ProdutoColetor();
 
             StringBuilder query = new StringBuilder();
 
-            ProdutoColetor p = new ProdutoColetor();
-
             try
             {
-
-                OracleConnection con = DataBase.novaConexao();
-
-                OracleCommand cmd = con.CreateCommand();
-
                 query.Append("SELECT TO_NUMBER(PF.CODFILIAL) AS CODFILIAL, P.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM as DESCRICAO, P.EMBALAGEMMASTER, P.UNIDADEMASTER, ");
                 query.Append("       P.QTUNITCX AS QTCX, CODAUXILIAR2 AS DUN, P.EMBALAGEM, P.UNIDADE, P.QTUNIT AS QTUNIT, CODAUXILIAR AS EAN, P.ALTURAARM AS ALT, ");
                 query.Append("       P.LARGURAARM AS LARG, P.COMPRIMENTOARM AS COMP, P.PESOBRUTOMASTER AS PESO, NVL(PF.LASTROPAL, 0) AS LASTRO, NVL(PF.ALTURAPAL, 0) AS CAMADA, ");
-                query.Append("       PF.QTTOTPAL AS QTTOTAL ");
-                query.Append("  FROM PCPRODUT P INNER JOIN PCPRODFILIAL PF ON(P.CODPROD = PF.CODPROD) ");
-                query.Append($" WHERE((P.CODPROD = {produto}) OR (P.CODAUXILIAR = {produto}) OR (P.CODAUXILIAR2 = {produto})) ");
+                query.Append("       PF.QTTOTPAL AS QTTOTAL, PK.CAPACIDADE * P.QTUNITCX AS CAPACIDADE, PK.PONTOREPOSICAO * P.QTUNITCX AS REPOSICAO, PF.PRAZOVAL, PF.PERCTOLERANCIAVAL, ");
+                query.Append("       P.ALTURAM3 AS ALT_UN, P.LARGURAM3 AS LARG_UN, P.COMPRIMENTOM3 AS COMP_UN, P.PESOBRUTO AS PESO_UN");
+                query.Append("  FROM PCPRODUT P INNER JOIN PCPRODFILIAL PF ON(P.CODPROD = PF.CODPROD) LEFT OUTER JOIN PCPRODUTPICKING PK ON (P.CODPROD = PK.CODPROD AND PF.CODFILIAL = PK.CODFILIAL)");
+                query.Append($" WHERE ((P.CODPROD = {produto}) OR (P.CODAUXILIAR = {produto}) OR (P.CODAUXILIAR2 = {produto})) ");
                 query.Append($"   AND PF.CODFILIAL = {filial}");
 
-                cmd.CommandText = query.ToString();
-                OracleDataReader reader = cmd.ExecuteReader();
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
 
                 if(reader.Read())
                 {
-
-                    p.codfilial = reader.GetInt32(0);
-                    p.codprod = reader.GetInt32(1);
-                    p.descricao = reader.GetString(2);
-                    p.embalagemmaster = reader.GetString(3);
-                    p.unidademaster = reader.GetString(4);
-                    p.qtcx = reader.GetInt32(5);
-                    p.dun = reader.GetInt64(6);
-                    p.embalagem = reader.GetString(7);
-                    p.unidade = reader.GetString(8);
-                    p.qtunit = reader.GetInt32(9);
-                    p.ean = reader.GetInt64(10);
-                    p.alt = reader.GetInt32(11);
-                    p.larg = reader.GetInt32(12);
-                    p.comp = reader.GetInt32(13);
-                    p.peso = reader.GetDouble(14);
-                    p.lastro = reader.GetInt32(15);
-                    p.camada = reader.GetInt32(16);
-                    p.total = reader.GetInt32(17);
-                    p.erro = "N";
-                    p.warning = "N";
-                    p.mensagemErroWarning = null;
+                    p.Codfilial = reader.GetInt32(0);
+                    p.Codprod = reader.GetInt32(1);
+                    p.Descricao = reader.GetString(2);
+                    p.Embalagemmaster = reader.GetString(3);
+                    p.Unidademaster = reader.GetString(4);
+                    p.Qtcx = reader.GetInt32(5);
+                    p.Dun = reader.GetInt64(6);
+                    p.Embalagem = reader.GetString(7);
+                    p.Unidade = reader.GetString(8);
+                    p.Qtunit = reader.GetInt32(9);
+                    p.Ean = reader.GetInt64(10);
+                    p.Alt = reader.GetInt32(11);
+                    p.Larg = reader.GetInt32(12);
+                    p.Comp = reader.GetInt32(13);
+                    p.Peso = reader.GetDouble(14);
+                    p.Lastro = reader.GetInt32(15);
+                    p.Camada = reader.GetInt32(16);
+                    p.Total = reader.GetInt32(17);
+                    p.Capacidade = reader.GetInt32(18);
+                    p.Reposicao = reader.GetInt32(19);
+                    p.PrazoValidade = reader.GetInt32(20);
+                    p.ShelfLife = reader.GetInt32(21);
+                    p.AltUn = reader.GetInt32(22);
+                    p.LargUn = reader.GetInt32(23);
+                    p.CompUn = reader.GetInt32(24);
+                    p.PesoUn = reader.GetDouble(25);
+                    p.Erro = "N";
+                    p.Warning = "N";
+                    p.MensagemErroWarning = null;
 
                     produtoColetor = p;
                 }
                 else
                 {
 
-                    p.erro = "N";
-                    p.warning = "S";
-                    p.mensagemErroWarning = "Produto não encontrado";
+                    p.Erro = "N";
+                    p.Warning = "S";
+                    p.MensagemErroWarning = "Produto não encontrado";
 
                     produtoColetor = p;
                 }
-                
-                con.Close();
+
                 return produtoColetor;
 
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
 
-                p.erro = "S";
-                p.mensagemErroWarning = e.Message;
+                if (connection.State == ConnectionState.Open)
+                {
+                    p.Erro = "S";
+                    p.MensagemErroWarning = ex.Message;
 
-                produtoColetor = p;
+                    produtoColetor = p;
+
+                    connection.Close();
+                }
+
+                exec.Dispose();
+                connection.Dispose();
 
                 return produtoColetor;
             }
-
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
         }
-
     }
 
     public class ProdutoEndereco
