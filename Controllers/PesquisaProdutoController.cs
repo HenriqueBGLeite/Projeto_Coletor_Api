@@ -27,22 +27,16 @@ namespace ProjetoColetorApi.Controllers
             return Json(new ProdutoEndereco().getEnderecoProduto(produto, filial));
         }
 
-        [Route("{produto}/{codigo}")]
-        public JsonResult getEstoqueProduto(string produto, int codigo)
+        [Route("{produto}/{codFunc}")]
+        public JsonResult getEstoqueProduto(string produto, int codFunc)
         {
-            return Json(new ProdutoEstoque().getEstoqueProduto(produto, codigo));
+            return Json(new ProdutoEstoque().getEstoqueProduto(produto, codFunc));
         }
 
         [Route("{codUsuario}")]
         public JsonResult getFiliais(int codUsuario)
         {
             return Json(new Filiais().getFiliais(codUsuario));
-        }
-
-        [Route("{produto}/{filial}")]
-        public JsonResult getEnderecoProdutoPicking(string produto, int filial)
-        {
-            return Json(new ProdutoEnderecoPicking().getEnderecoProdutoPicking(produto, filial));
         }
 
         [HttpPut]

@@ -203,9 +203,9 @@ namespace ProjetoColetorApi.Model
                 OracleTransaction transacao = connection.BeginTransaction();
                 exec.Transaction = transacao;
 
-                // query.Append($"select fnc_busca_prox_os_invent({codUsuario}, {codEndereco}, {contagem}) as endereco from dual");
+                query.Append($"select fnc_busca_prox_os_invent({codUsuario}, {codEndereco}, {contagem}) as endereco from dual");
                 // Para testar, comentar a linha de cima e descomentar a debaixo
-                query.Append("select to_char(45947) as inventos from dual");
+                // query.Append("select to_char(45947) as inventos from dual");
 
                 exec.CommandText = query.ToString();
                 OracleDataReader reader = exec.ExecuteReader();

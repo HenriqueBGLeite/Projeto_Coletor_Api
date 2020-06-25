@@ -97,7 +97,7 @@ namespace ProjetoColetorApi.Model
                 {
                     usuario.Erro = "N";
                     usuario.Warning = "S";
-                    usuario.MensagemErroWarning = "Usuário inválido";
+                    usuario.MensagemErroWarning = "Usuário inválido. Verifique usuário/senha.";
 
                     con.Close();
 
