@@ -21,12 +21,12 @@ namespace ProjetoColetorApi.Model
         public string Unidade { get; set; }
         public int Qtunit { get; set; }
         public Int64 Ean { get; set; }
-        public int Alt { get; set; }
-        public int Larg { get; set; }
-        public int Comp { get; set; }
-        public int AltUn { get; set; }
-        public int LargUn { get; set; }
-        public int CompUn { get; set; }
+        public double Alt { get; set; }
+        public double Larg { get; set; }
+        public double Comp { get; set; }
+        public double AltUn { get; set; }
+        public double LargUn { get; set; }
+        public double CompUn { get; set; }
         public int Lastro { get; set; }
         public int Camada { get; set; }
         public int Total { get; set; }
@@ -62,10 +62,10 @@ namespace ProjetoColetorApi.Model
                 decimal volumeUnit = ((Convert.ToDecimal(prod.AltUn) * Convert.ToDecimal(prod.LargUn) * Convert.ToDecimal(prod.CompUn)) / 1000000); 
 
                 //UPDATE PCPRODUT 
-                pcprodut.Append($"UPDATE PCPRODUT SET CODAUXILIAR = {prod.Ean}, CODAUXILIAR2 = {prod.Dun}, ALTURAARM = {prod.Alt}, LARGURAARM = {prod.Larg}, ");
-                pcprodut.Append($"COMPRIMENTOARM = {prod.Comp}, VOLUMEARM = {volumeMaster.ToString().Replace(",", ".")}, PESOLIQMASTER = {prod.Peso.ToString().Replace(",", ".")}, PESOBRUTOMASTER = {prod.Peso.ToString().Replace(",", ".")}, ");
+                pcprodut.Append($"UPDATE PCPRODUT SET CODAUXILIAR = {prod.Ean}, CODAUXILIAR2 = {prod.Dun}, ALTURAARM = {prod.Alt.ToString().Replace(",", ".")}, LARGURAARM = {prod.Larg.ToString().Replace(",", ".")}, ");
+                pcprodut.Append($"COMPRIMENTOARM = {prod.Comp.ToString().Replace(",", ".")}, VOLUMEARM = {volumeMaster.ToString().Replace(",", ".")}, PESOLIQMASTER = {prod.Peso.ToString().Replace(",", ".")}, PESOBRUTOMASTER = {prod.Peso.ToString().Replace(",", ".")}, ");
                 pcprodut.Append($"VOLUME = {volumeUnit.ToString().Replace(",", ".")}, PESOLIQ = ROUND({prod.PesoUn.ToString().Replace(",", ".")},4), PESOBRUTO = ROUND({prod.PesoUn.ToString().Replace(",", ".")},4), ");
-                pcprodut.Append($"ALTURAM3 = {prod.AltUn}, LARGURAM3 = {prod.LargUn}, COMPRIMENTOM3 = {prod.CompUn}");
+                pcprodut.Append($"ALTURAM3 = {prod.AltUn.ToString().Replace(",", ".")}, LARGURAM3 = {prod.LargUn.ToString().Replace(",", ".")}, COMPRIMENTOM3 = {prod.CompUn.ToString().Replace(",", ".")}");
                 pcprodut.Append($" where codprod = {prod.Codprod}");
 
                 exec.CommandText = pcprodut.ToString();
@@ -152,17 +152,17 @@ namespace ProjetoColetorApi.Model
                     p.Unidade = reader.GetString(4);
                     p.Qtunit = reader.GetInt32(5);
                     p.Ean = reader.GetInt64(6);
-                    p.AltUn = reader.GetInt32(7);
-                    p.LargUn = reader.GetInt32(8);
-                    p.CompUn = reader.GetInt32(9);
+                    p.AltUn = reader.GetDouble(7);
+                    p.LargUn = reader.GetDouble(8);
+                    p.CompUn = reader.GetDouble(9);
                     p.PesoUn = reader.GetDouble(10);
                     p.Embalagemmaster = reader.GetString(11);
                     p.Unidademaster = reader.GetString(12);
                     p.Qtcx = reader.GetInt32(13);
                     p.Dun = reader.GetInt64(14);
-                    p.Alt = reader.GetInt32(15);
-                    p.Larg = reader.GetInt32(16);
-                    p.Comp = reader.GetInt32(17);
+                    p.Alt = reader.GetDouble(15);
+                    p.Larg = reader.GetDouble(16);
+                    p.Comp = reader.GetDouble(17);
                     p.Peso = reader.GetDouble(18);
                     p.Lastro = reader.GetInt32(19);
                     p.Camada = reader.GetInt32(20);
@@ -475,6 +475,90 @@ namespace ProjetoColetorApi.Model
                 exec.Dispose();
                 connection.Dispose();
             }
+        }
+    }
+
+    public class ProdutoEnderecoPicking
+    {
+        public int Codendereco { get; set; }
+        public int Codprod { get; set; }
+        public string Descricao { get; set; }
+        public int Qt { get; set; }
+        public int Deposito { get; set; }
+        public int Rua { get; set; }
+        public int Predio { get; set; }
+        public int Nivel { get; set; }
+        public int Apto { get; set; }
+
+        public string Erro { get; set; }
+        public string Warning { get; set; }
+        public string MensagemErroWarning { get; set; }
+
+        public List<ProdutoEnderecoPicking> getEnderecoProdutoPicking(int produto, int filial)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+
+            List<ProdutoEnderecoPicking> produtoEnderecoPicking = new List<ProdutoEnderecoPicking>();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append("select en.codendereco, prod.codprod, prod.descricao, est.qt, en.deposito, en.rua, en.predio, en.nivel, en.apto");
+                query.Append("  from pcendereco en inner join pcprodutpicking pk on (en.codendereco = pk.codendereco and en.codfilial = pk.codfilial)");
+                query.Append("                     inner join pcestendereco est on(en.codendereco = est.codendereco)");
+                query.Append("                     inner join pcprodut prod on(est.codprod = prod.codprod)");
+                query.Append($"where ((prod.codprod = {produto}) or (prod.codauxiliar = {produto}) or (prod.codauxiliar2 = {produto}))");
+                query.Append($"  and en.codfilial = { filial}");
+                query.Append("order by en.deposito, en.rua, case when mod(en.rua, 2) = 1 then en.predio end asc, case when mod(en.rua, 2) = 0 then en.predio end desc, en.nivel, en.apto");
+
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                ProdutoEnderecoPicking pend = new ProdutoEnderecoPicking();
+
+                if (reader.Read())
+                {
+                    pend.Codendereco = reader.GetInt32(0);
+                    pend.Codprod = reader.GetInt32(1);
+                    pend.Descricao = reader.GetString(2);
+                    pend.Qt = reader.GetInt32(3);
+                    pend.Deposito = reader.GetInt32(4);
+                    pend.Rua = reader.GetInt32(5);
+                    pend.Predio = reader.GetInt32(6);
+                    pend.Nivel = reader.GetInt32(7);
+                    pend.Apto = reader.GetInt32(8);
+
+                    produtoEnderecoPicking.Add(pend);
+                }
+                else
+                {
+                    pend.Erro = "N";
+                    pend.Warning = "S";
+                    pend.MensagemErroWarning = "Produto não encontrado";
+
+                    produtoEnderecoPicking.Add(pend);
+                }
+
+                connection.Close();
+
+                return produtoEnderecoPicking;
+
+            }
+            catch (Exception e)
+            {
+                ProdutoEnderecoPicking pend = new ProdutoEnderecoPicking();
+
+                pend.Erro = "S";
+                pend.MensagemErroWarning = e.Message;
+
+                produtoEnderecoPicking.Add(pend);
+
+                return produtoEnderecoPicking;
+            }
+
         }
     }
 }

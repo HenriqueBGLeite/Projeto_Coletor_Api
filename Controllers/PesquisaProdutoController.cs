@@ -7,14 +7,23 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using ProjetoColetorApi.Model;
 
-
-
 namespace ProjetoColetorApi.Controllers
 {
     [Route("api/[Controller]/[Action]/")]
     [Authorize()]
     public class PesquisaProdutoController : Controller
     {
+        // Tela de consultar produto
+        [HttpPut]
+        public Boolean editaDadosProd([FromBody] ProdutoColetor prod)
+        {
+            Boolean salvou = false;
+
+            salvou = prod.editaDados(prod);
+
+            return salvou;
+        }
+
         [Route("{produto}/{filial}")]
         public JsonResult getProduto(string produto, int filial)
         {
@@ -38,15 +47,11 @@ namespace ProjetoColetorApi.Controllers
         {
             return Json(new Filiais().getFiliais(codUsuario));
         }
-
-        [HttpPut]
-        public Boolean editaDadosProd([FromBody] ProdutoColetor prod)
+        // Tela de listar endereços
+        [Route("{produto}/{filial}")]
+        public JsonResult getEnderecoProdutoPicking(int produto, int filial)
         {
-            Boolean salvou = false;
-
-            salvou = prod.editaDados(prod);
-
-            return salvou;
-        }
+            return Json(new ProdutoEnderecoPicking().getEnderecoProdutoPicking(produto, filial));
+        }       
     }
 }
