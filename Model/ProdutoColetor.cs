@@ -1,4 +1,5 @@
-﻿using Oracle.ManagedDataAccess.Client;
+﻿using Microsoft.AspNetCore.Mvc.Razor;
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -16,26 +17,26 @@ namespace ProjetoColetorApi.Model
         public string Embalagemmaster { get; set; }
         public string Unidademaster { get; set; }
         public int Qtcx { get; set; }
-        public Int64 Dun { get; set; }
+        public Int64? Dun { get; set; }
         public string Embalagem { get; set; }
         public string Unidade { get; set; }
         public int Qtunit { get; set; }
-        public Int64 Ean { get; set; }
-        public double Alt { get; set; }
-        public double Larg { get; set; }
-        public double Comp { get; set; }
-        public double AltUn { get; set; }
-        public double LargUn { get; set; }
-        public double CompUn { get; set; }
-        public int Lastro { get; set; }
-        public int Camada { get; set; }
-        public int Total { get; set; }
-        public double Peso { get; set; }
-        public double PesoUn { get; set; }
-        public int Capacidade { get; set; }
-        public int Reposicao { get; set; }
-        public int PrazoValidade { get; set; }
-        public int ShelfLife { get; set; }
+        public Int64? Ean { get; set; }
+        public double? Alt { get; set; }
+        public double? Larg { get; set; }
+        public double? Comp { get; set; }
+        public double? AltUn { get; set; }
+        public double? LargUn { get; set; }
+        public double? CompUn { get; set; }
+        public int? Lastro { get; set; }
+        public int? Camada { get; set; }
+        public int? Total { get; set; }
+        public double? Peso { get; set; }
+        public double? PesoUn { get; set; }
+        public int? Capacidade { get; set; }
+        public int? Reposicao { get; set; }
+        public int? PrazoValidade { get; set; }
+        public int? ShelfLife { get; set; }
 
         public string Erro { get; set; }
         public string Warning { get; set; }
@@ -57,6 +58,31 @@ namespace ProjetoColetorApi.Model
                 OracleTransaction transacao = connection.BeginTransaction();
                 exec.Transaction = transacao;
 
+                //Elimina valores que podem ser nulos
+                //PCPRODUT - Unidade
+                if (prod.Ean == null) { prod.Ean = 0; }
+                if (prod.AltUn == null) { prod.AltUn = 0; }
+                if (prod.LargUn == null) { prod.LargUn = 0; }
+                if (prod.CompUn == null) { prod.CompUn = 0; }
+                if (prod.PesoUn == null) { prod.PesoUn = 0; }
+                //PCPRODUT - Master
+                if (prod.Embalagemmaster == null) { prod.Embalagemmaster = ""; }
+                if (prod.Dun == null) { prod.Dun = 0; }
+                if (prod.Alt == null) { prod.Alt = 0; }
+                if (prod.Larg == null) { prod.Larg = 0; }
+                if (prod.Comp == null) { prod.Comp = 0; }
+                if (prod.Peso == null) { prod.Peso = 0; }
+                //PCPRODFILIAL - Norma Palete
+                if (prod.Lastro == null) { prod.Lastro = 0; }
+                if (prod.Camada == null) { prod.Camada = 0; }
+                if (prod.Total == null) { prod.Total = 0; }
+                //PCPRODFILIAL - Validade
+                if (prod.PrazoValidade == null) { prod.PrazoValidade = 0; }
+                if (prod.ShelfLife == null) { prod.ShelfLife = 0; }
+                //PCPRODUTOPICKING
+                if (prod.Capacidade == null) { prod.Capacidade = 0; }
+                if (prod.Reposicao == null) { prod.Reposicao = 0; }
+
                 //CALCULA VOL. MASTER
                 decimal volumeMaster = ((Convert.ToDecimal(prod.Alt) * Convert.ToDecimal(prod.Larg) * Convert.ToDecimal(prod.Comp)) / 1000000);
                 decimal volumeUnit = ((Convert.ToDecimal(prod.AltUn) * Convert.ToDecimal(prod.LargUn) * Convert.ToDecimal(prod.CompUn)) / 1000000); 
@@ -66,7 +92,7 @@ namespace ProjetoColetorApi.Model
                 pcprodut.Append($"COMPRIMENTOARM = {prod.Comp.ToString().Replace(",", ".")}, VOLUMEARM = {volumeMaster.ToString().Replace(",", ".")}, PESOLIQMASTER = {prod.Peso.ToString().Replace(",", ".")}, PESOBRUTOMASTER = {prod.Peso.ToString().Replace(",", ".")}, ");
                 pcprodut.Append($"VOLUME = {volumeUnit.ToString().Replace(",", ".")}, PESOLIQ = ROUND({prod.PesoUn.ToString().Replace(",", ".")},4), PESOBRUTO = ROUND({prod.PesoUn.ToString().Replace(",", ".")},4), ");
                 pcprodut.Append($"ALTURAM3 = {prod.AltUn.ToString().Replace(",", ".")}, LARGURAM3 = {prod.LargUn.ToString().Replace(",", ".")}, COMPRIMENTOM3 = {prod.CompUn.ToString().Replace(",", ".")}");
-                pcprodut.Append($" where codprod = {prod.Codprod}");
+                pcprodut.Append($" WHERE CODPROD = {prod.Codprod}");
 
                 exec.CommandText = pcprodut.ToString();
                 OracleDataReader produt = exec.ExecuteReader();
@@ -94,11 +120,11 @@ namespace ProjetoColetorApi.Model
             }
             catch (Exception ex)
             {
+                salvou = false;
+
                 if (connection.State == ConnectionState.Open)
                 {
-                    salvou = false;
-                    connection.Close();
-                    
+                    connection.Close();                    
                     return salvou;
                 }
 
@@ -118,14 +144,15 @@ namespace ProjetoColetorApi.Model
             }
         }
 
-        public ProdutoColetor getProduto(string produto, int filial)
+        public DataTable getProduto(string produto, int filial)
         {
 
             OracleConnection connection = DataBase.novaConexao();
 
             OracleCommand exec = connection.CreateCommand();
 
-            ProdutoColetor produtoColetor = new ProdutoColetor();
+            DataTable produtoColetor = new DataTable();
+
             ProdutoColetor p = new ProdutoColetor();
 
             StringBuilder query = new StringBuilder();
@@ -133,80 +160,37 @@ namespace ProjetoColetorApi.Model
             try
             {
                 query.Append("SELECT TO_NUMBER(PF.CODFILIAL) AS CODFILIAL, P.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM as DESCRICAO, ");
-                query.Append("       P.EMBALAGEM, P.UNIDADE, P.QTUNIT AS QTUNIT, CODAUXILIAR AS EAN, P.ALTURAM3 AS ALT_UN, P.LARGURAM3 AS LARG_UN, P.COMPRIMENTOM3 AS COMP_UN, P.PESOBRUTO AS PESO_UN, ");
+                query.Append("       P.EMBALAGEM, P.UNIDADE, P.QTUNIT AS QTUNIT, CODAUXILIAR AS EAN, P.ALTURAM3 AS ALTUN, P.LARGURAM3 AS LARGUN, P.COMPRIMENTOM3 AS COMPUN, P.PESOBRUTO AS PESOUN, ");
                 query.Append("       P.EMBALAGEMMASTER, P.UNIDADEMASTER, P.QTUNITCX AS QTCX, CODAUXILIAR2 AS DUN, P.ALTURAARM AS ALT, P.LARGURAARM AS LARG, P.COMPRIMENTOARM AS COMP, P.PESOBRUTOMASTER AS PESO, ");
-                query.Append("       NVL(PF.LASTROPAL, 0) AS LASTRO, NVL(PF.ALTURAPAL, 0) AS CAMADA, PF.QTTOTPAL AS QTTOTAL, PK.CAPACIDADE AS CAPACIDADE, PK.PONTOREPOSICAO AS REPOSICAO, PF.PRAZOVAL, PF.PERCTOLERANCIAVAL");
+                query.Append("       NVL(PF.LASTROPAL, 0) AS LASTRO, NVL(PF.ALTURAPAL, 0) AS CAMADA, PF.QTTOTPAL AS TOTAL, PK.CAPACIDADE AS CAPACIDADE, PK.PONTOREPOSICAO AS REPOSICAO, PF.PRAZOVAL AS PRAZOVALIDADE, PF.PERCTOLERANCIAVAL AS SHELFLIFE");
                 query.Append("  FROM PCPRODUT P INNER JOIN PCPRODFILIAL PF ON(P.CODPROD = PF.CODPROD) LEFT OUTER JOIN PCPRODUTPICKING PK ON (P.CODPROD = PK.CODPROD AND PF.CODFILIAL = PK.CODFILIAL)");
                 query.Append($" WHERE ((P.CODPROD = {produto}) OR (P.CODAUXILIAR = {produto}) OR (P.CODAUXILIAR2 = {produto})) ");
                 query.Append($"   AND PF.CODFILIAL = {filial}");
 
                 exec.CommandText = query.ToString();
-                OracleDataReader reader = exec.ExecuteReader();
-
-                if(reader.Read())
-                {
-                    p.Codfilial = reader.GetInt32(0);
-                    p.Codprod = reader.GetInt32(1);
-                    p.Descricao = reader.GetString(2);
-                    p.Embalagem = reader.GetString(3);
-                    p.Unidade = reader.GetString(4);
-                    p.Qtunit = reader.GetInt32(5);
-                    p.Ean = reader.GetInt64(6);
-                    p.AltUn = reader.GetDouble(7);
-                    p.LargUn = reader.GetDouble(8);
-                    p.CompUn = reader.GetDouble(9);
-                    p.PesoUn = reader.GetDouble(10);
-                    p.Embalagemmaster = reader.GetString(11);
-                    p.Unidademaster = reader.GetString(12);
-                    p.Qtcx = reader.GetInt32(13);
-                    p.Dun = reader.GetInt64(14);
-                    p.Alt = reader.GetDouble(15);
-                    p.Larg = reader.GetDouble(16);
-                    p.Comp = reader.GetDouble(17);
-                    p.Peso = reader.GetDouble(18);
-                    p.Lastro = reader.GetInt32(19);
-                    p.Camada = reader.GetInt32(20);
-                    p.Total = reader.GetInt32(21);
-                    p.Capacidade = reader.GetInt32(22);
-                    p.Reposicao = reader.GetInt32(23);
-                    p.PrazoValidade = reader.GetInt32(24);
-                    p.ShelfLife = reader.GetInt32(25);
-                    p.Erro = "N";
-                    p.Warning = "N";
-                    p.MensagemErroWarning = null;
-
-                    produtoColetor = p;
-                }
-                else
-                {
-
-                    p.Erro = "N";
-                    p.Warning = "S";
-                    p.MensagemErroWarning = "Produto não encontrado";
-
-                    produtoColetor = p;
-                }
-
+                OracleDataAdapter oda = new OracleDataAdapter(exec);
+                oda.SelectCommand = exec;
+                oda.Fill(produtoColetor);
+ 
                 return produtoColetor;
-
             }
             catch (Exception ex)
             {
 
                 if (connection.State == ConnectionState.Open)
                 {
-                    p.Erro = "S";
+                    p.Erro                = "S";
                     p.MensagemErroWarning = ex.Message;
 
-                    produtoColetor = p;
-
                     connection.Close();
+
+                    return null;
                 }
 
                 exec.Dispose();
                 connection.Dispose();
 
-                return produtoColetor;
+                return null;
             }
             finally
             {
@@ -480,6 +464,8 @@ namespace ProjetoColetorApi.Model
 
     public class ProdutoEnderecoPicking
     {
+        public int Numreposicao { get; set; }
+        public int Codfilial { get; set; }
         public int Codendereco { get; set; }
         public int Codprod { get; set; }
         public string Descricao { get; set; }
@@ -489,30 +475,122 @@ namespace ProjetoColetorApi.Model
         public int Predio { get; set; }
         public int Nivel { get; set; }
         public int Apto { get; set; }
+        public Int64 Ean { get; set; }
+        public Int64 Dun { get; set; }
+        public int Qtunitcx { get; set; }
+
 
         public string Erro { get; set; }
         public string Warning { get; set; }
         public string MensagemErroWarning { get; set; }
 
-        public List<ProdutoEnderecoPicking> getEnderecoProdutoPicking(int produto, int filial)
+        public List<ProdutoEnderecoPicking> getListaReposicaoAberta(int codUsuario)
         {
             OracleConnection connection = DataBase.novaConexao();
 
             OracleCommand exec = connection.CreateCommand();
 
-            List<ProdutoEnderecoPicking> produtoEnderecoPicking = new List<ProdutoEnderecoPicking>();
+            List<ProdutoEnderecoPicking> listaReposicao = new List<ProdutoEnderecoPicking>();
 
             StringBuilder query = new StringBuilder();
 
             try
             {
-                query.Append("select en.codendereco, prod.codprod, prod.descricao, est.qt, en.deposito, en.rua, en.predio, en.nivel, en.apto");
+                query.Append("select rep.codfilial, rep.numreposicao, rep.codprod, prod.descricao, prod.codauxiliar as ean, prod.codauxiliar2 as dun, prod.qtunitcx, ");
+                query.Append("       pk.codendereco, en.deposito, en.rua, en.predio, en.nivel, en.apto, rep.qt");
+                query.Append("  from pcprodut prod inner join tab_logistica_reposicao rep on (prod.codprod = rep.codprod)");
+                query.Append("                     inner join pcprodutpicking pk on (rep.codprod = pk.codprod and rep.codfilial = pk.codfilial)");
+                query.Append("                     inner join pcendereco en on(pk.codendereco = en.codendereco and rep.codfilial = en.codfilial) ");
+                query.Append($"where rep.codfunclista = {codUsuario}");
+                query.Append("  and rep.dtconflista is null and rep.dtcancel is null ");
+                query.Append("order by decode(en.tipoender, 'AP', 'AAP'), en.deposito, en.rua, case when mod(en.rua, 2) = 1 then en.predio end asc, case when mod(en.rua, 2) = 0 then en.predio end desc, en.nivel, en.apto");
+
+
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    ProdutoEnderecoPicking lista = new ProdutoEnderecoPicking();
+
+                    lista.Codfilial = reader.GetInt32(0);
+                    lista.Numreposicao = reader.GetInt32(1);
+                    lista.Codprod      = reader.GetInt32(2);
+                    lista.Descricao    = reader.GetString(3);
+                    lista.Ean          = reader.GetInt64(4);
+                    lista.Dun          = reader.GetInt64(5);
+                    lista.Qtunitcx     = reader.GetInt32(6);
+                    lista.Codendereco  = reader.GetInt32(7);
+                    lista.Deposito     = reader.GetInt32(8);
+                    lista.Rua          = reader.GetInt32(9);
+                    lista.Predio       = reader.GetInt32(10);
+                    lista.Nivel        = reader.GetInt32(11);
+                    lista.Apto         = reader.GetInt32(12);
+                    lista.Qt           = reader.GetInt32(13);
+                    lista.Warning      = "N";
+                    lista.Erro         = "N";
+
+                    listaReposicao.Add(lista);
+                }
+
+                connection.Close();
+
+                return listaReposicao;
+
+            }
+            catch (Exception ex)
+            {
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    ProdutoEnderecoPicking lista = new ProdutoEnderecoPicking();
+
+                    lista.Erro = "S";
+                    lista.MensagemErroWarning = ex.Message;
+
+                    listaReposicao.Add(lista);
+
+
+                    connection.Close();
+                    return listaReposicao;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return listaReposicao;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public ProdutoEnderecoPicking getEnderecoProdutoPicking(string produto, int filial)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+
+            ProdutoEnderecoPicking produtoEnderecoPicking = new ProdutoEnderecoPicking();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append($"select en.codendereco, prod.codprod, prod.descricao, case when {produto} = prod.codauxiliar2 then prod.qtunitcx else prod.qtunit end qt, ");
+                query.Append("        en.deposito, en.rua, en.predio, en.nivel, en.apto, prod.codauxiliar as ean, prod.codauxiliar2 as dun, prod.qtunitcx");
                 query.Append("  from pcendereco en inner join pcprodutpicking pk on (en.codendereco = pk.codendereco and en.codfilial = pk.codfilial)");
-                query.Append("                     inner join pcestendereco est on(en.codendereco = est.codendereco)");
-                query.Append("                     inner join pcprodut prod on(est.codprod = prod.codprod)");
+                query.Append("                     inner join pcestendereco est on (en.codendereco = est.codendereco)");
+                query.Append("                     inner join pcprodut prod on (est.codprod = prod.codprod) ");
                 query.Append($"where ((prod.codprod = {produto}) or (prod.codauxiliar = {produto}) or (prod.codauxiliar2 = {produto}))");
-                query.Append($"  and en.codfilial = { filial}");
-                query.Append("order by en.deposito, en.rua, case when mod(en.rua, 2) = 1 then en.predio end asc, case when mod(en.rua, 2) = 0 then en.predio end desc, en.nivel, en.apto");
+                query.Append($"  and en.codfilial = {filial}");
+                query.Append(" order by en.deposito, en.rua, case when mod(en.rua, 2) = 1 then en.predio end asc, case when mod(en.rua, 2) = 0 then en.predio end desc, en.nivel, en.apto");
 
                 exec.CommandText = query.ToString();
                 OracleDataReader reader = exec.ExecuteReader();
@@ -530,16 +608,22 @@ namespace ProjetoColetorApi.Model
                     pend.Predio = reader.GetInt32(6);
                     pend.Nivel = reader.GetInt32(7);
                     pend.Apto = reader.GetInt32(8);
+                    pend.Ean = reader.GetInt64(9);
+                    pend.Dun = reader.GetInt64(10);
+                    pend.Qtunitcx = reader.GetInt32(11);
+                    pend.Codfilial = filial;
+                    pend.Warning = "N";
+                    pend.Erro = "N";
 
-                    produtoEnderecoPicking.Add(pend);
+                    produtoEnderecoPicking = pend;
                 }
                 else
                 {
                     pend.Erro = "N";
                     pend.Warning = "S";
-                    pend.MensagemErroWarning = "Produto não encontrado";
+                    pend.MensagemErroWarning = "Produto não encontrado.";
 
-                    produtoEnderecoPicking.Add(pend);
+                    produtoEnderecoPicking = pend;
                 }
 
                 connection.Close();
@@ -547,18 +631,232 @@ namespace ProjetoColetorApi.Model
                 return produtoEnderecoPicking;
 
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                ProdutoEnderecoPicking pend = new ProdutoEnderecoPicking();
+                if (connection.State == ConnectionState.Open)
+                {
+                    ProdutoEnderecoPicking pend = new ProdutoEnderecoPicking();
 
-                pend.Erro = "S";
-                pend.MensagemErroWarning = e.Message;
+                    pend.Erro = "S";
+                    pend.MensagemErroWarning = ex.Message;
 
-                produtoEnderecoPicking.Add(pend);
+                    produtoEnderecoPicking = pend;
+
+                    connection.Close();
+
+                    return produtoEnderecoPicking;                  
+                }
+
+                exec.Dispose();
+                connection.Dispose();
 
                 return produtoEnderecoPicking;
             }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
 
+        public int proximaReposicao()
+        {
+            int proxReposicao;
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+            
+            StringBuilder query = new StringBuilder();
+            try
+            {
+                query.Append("SELECT NVL(MAX(NUMREPOSICAO),0) + 1 AS PROXREPOSICAO FROM TAB_LOGISTICA_REPOSICAO");
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    proxReposicao = reader.GetInt32(0);
+                    return proxReposicao;
+                }
+                else
+                {
+                    proxReposicao = 0;
+                    return proxReposicao;
+                }
+            }
+            catch (Exception ex)
+            {
+                proxReposicao = 0;
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return proxReposicao;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return proxReposicao;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }            
+        }
+
+        public Boolean gravaListaEndereco(List<ProdutoEnderecoPicking> lista)
+        {
+            Boolean salvou = false;
+
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder numReposicao = new StringBuilder();
+
+            try
+            {
+                lista.ForEach(list =>
+                {
+                    StringBuilder query = new StringBuilder();
+                    ProdutoEnderecoPicking data = new ProdutoEnderecoPicking();
+
+                    data.Numreposicao = list.Numreposicao;
+                    data.Codprod = list.Codprod;
+                    data.Codfilial = list.Codfilial;
+                    data.Qt = list.Qt;
+
+                    query.Append($"INSERT INTO TAB_LOGISTICA_REPOSICAO (NUMREPOSICAO, CODPROD, CODFILIAL, QT, DTINICIOCONF, CODFUNCLISTA) VALUES ({data.Numreposicao}, {data.Codprod}, {data.Codfilial}, {data.Qt}, SYSDATE, 1219)");
+                    exec.CommandText = query.ToString();
+                    OracleDataReader reader = exec.ExecuteReader();
+                });
+                salvou = true;
+                return salvou;
+            }
+            catch (Exception ex)
+            {
+                salvou = false;
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return salvou;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return salvou;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean finalizaConfListagem(ProdutoEnderecoPicking lista)
+        {
+            Boolean salvou = false;
+
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+            
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append($"UPDATE TAB_LOGISTICA_REPOSICAO SET QTCONFERIDA = {lista.Qt}, DTFIMCONF = SYSDATE, DTCONFLISTA = SYSDATE WHERE NUMREPOSICAO = {lista.Numreposicao} AND CODPROD = {lista.Codprod} AND CODFILIAL = {lista.Codfilial}");
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                salvou = true;
+                return salvou;
+            }
+            catch (Exception ex)
+            {
+                salvou = false;
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return salvou;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return salvou;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean cancelarListagem(int numListagem)
+        {
+            Boolean cancelado = false;
+
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append($"UPDATE TAB_LOGISTICA_REPOSICAO SET DTCANCEL = SYSDATE WHERE NUMREPOSICAO = {numListagem}");
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                cancelado = true;
+                return cancelado;
+            }
+            catch (Exception ex)
+            {
+                cancelado = false;
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return cancelado;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return cancelado;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
         }
     }
 }

@@ -47,11 +47,54 @@ namespace ProjetoColetorApi.Controllers
         {
             return Json(new Filiais().getFiliais(codUsuario));
         }
+
         // Tela de listar endereços
+        [Route("{codUsuario}")]
+        public JsonResult getListaReposicaoAberta(int codUsuario)
+        {
+            return Json(new ProdutoEnderecoPicking().getListaReposicaoAberta(codUsuario));
+        }
+
         [Route("{produto}/{filial}")]
-        public JsonResult getEnderecoProdutoPicking(int produto, int filial)
+        public JsonResult getEnderecoProdutoPicking(string produto, int filial)
         {
             return Json(new ProdutoEnderecoPicking().getEnderecoProdutoPicking(produto, filial));
-        }       
+        }
+
+        public JsonResult proximaRequisicao()
+        {
+            return Json(new ProdutoEnderecoPicking().proximaReposicao());
+        }
+
+        [HttpPost]
+        public Boolean gravaListaEndereco([FromBody] List<ProdutoEnderecoPicking> lista)
+        {
+            Boolean salvou = false;
+
+            salvou = new ProdutoEnderecoPicking().gravaListaEndereco(lista);
+
+            return salvou;
+        }
+
+        [HttpPut]
+        public Boolean finalizaConfListagem([FromBody] ProdutoEnderecoPicking lista)
+        {
+            Boolean salvou = false;
+
+            salvou = new ProdutoEnderecoPicking().finalizaConfListagem(lista);
+
+            return salvou;
+        }
+
+        [HttpPut]
+        [Route("{numLista}")]
+        public Boolean cancelarListagem(int numLista)
+        {
+            Boolean cancelado = false;
+
+            cancelado = new ProdutoEnderecoPicking().cancelarListagem(numLista);
+
+            return cancelado;
+        }
     }
 }
