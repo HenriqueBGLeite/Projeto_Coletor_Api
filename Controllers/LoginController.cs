@@ -70,18 +70,13 @@ namespace ProjetoColetorApi.Controllers
                     issuer: "EPOCA",
                     audience: "EPOCA",
                     claims: claims,
-                    expires: DateTime.Now.AddDays(1),
+                    expires: DateTime.Now.AddHours(12),
                     signingCredentials: creds
                     );
 
                 usuarioAutenticado.Token = new JwtSecurityTokenHandler().WriteToken(token);
 
                 return usuarioAutenticado;
-
-                /*return Ok(new
-                {
-                    token = new JwtSecurityTokenHandler().WriteToken(token)
-                });*/
             }
             else
             {

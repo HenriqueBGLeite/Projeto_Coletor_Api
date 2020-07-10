@@ -467,6 +467,7 @@ namespace ProjetoColetorApi.Model
         public int Numreposicao { get; set; }
         public int Codfilial { get; set; }
         public int Codendereco { get; set; }
+        public int Codfunc { get; set; }
         public int Codprod { get; set; }
         public string Descricao { get; set; }
         public int Qt { get; set; }
@@ -714,13 +715,13 @@ namespace ProjetoColetorApi.Model
             }            
         }
 
-        public Boolean gravaListaEndereco(List<ProdutoEnderecoPicking> lista)
+        public List<ProdutoEnderecoPicking> gravaListaEndereco(List<ProdutoEnderecoPicking> lista)
         {
-            Boolean salvou = false;
-
             OracleConnection connection = DataBase.novaConexao();
 
             OracleCommand exec = connection.CreateCommand();
+
+            List<ProdutoEnderecoPicking> listaOrdenada = new List<ProdutoEnderecoPicking>();
 
             StringBuilder numReposicao = new StringBuilder();
 
@@ -732,31 +733,38 @@ namespace ProjetoColetorApi.Model
                     ProdutoEnderecoPicking data = new ProdutoEnderecoPicking();
 
                     data.Numreposicao = list.Numreposicao;
+                    data.Codfunc = list.Codfunc;
                     data.Codprod = list.Codprod;
                     data.Codfilial = list.Codfilial;
                     data.Qt = list.Qt;
 
-                    query.Append($"INSERT INTO TAB_LOGISTICA_REPOSICAO (NUMREPOSICAO, CODPROD, CODFILIAL, QT, DTINICIOCONF, CODFUNCLISTA) VALUES ({data.Numreposicao}, {data.Codprod}, {data.Codfilial}, {data.Qt}, SYSDATE, 1219)");
+                    query.Append($"INSERT INTO TAB_LOGISTICA_REPOSICAO (NUMREPOSICAO, CODPROD, CODFILIAL, QT, DTINICIOCONF, CODFUNCLISTA) VALUES ({data.Numreposicao}, {data.Codprod}, {data.Codfilial}, {data.Qt}, SYSDATE, {data.Codfunc})");
                     exec.CommandText = query.ToString();
                     OracleDataReader reader = exec.ExecuteReader();
                 });
-                salvou = true;
-                return salvou;
+
+                listaOrdenada = this.getListaReposicaoAberta(lista[0].Codfunc);
+
+                return listaOrdenada;
             }
             catch (Exception ex)
             {
-                salvou = false;
-
                 if (connection.State == ConnectionState.Open)
                 {
+                    ProdutoEnderecoPicking listaErro = new ProdutoEnderecoPicking();
+
+                    listaErro.Erro = "S";
+                    listaErro.MensagemErroWarning = ex.Message;
+
+                    listaOrdenada.Add(listaErro);
+
                     connection.Close();
-                    return salvou;
+                    return listaOrdenada;
                 }
 
                 exec.Dispose();
                 connection.Dispose();
-
-                return salvou;
+                return listaOrdenada;
             }
             finally
             {

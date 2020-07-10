@@ -67,13 +67,9 @@ namespace ProjetoColetorApi.Controllers
         }
 
         [HttpPost]
-        public Boolean gravaListaEndereco([FromBody] List<ProdutoEnderecoPicking> lista)
+        public JsonResult gravaListaEndereco([FromBody] List<ProdutoEnderecoPicking> lista)
         {
-            Boolean salvou = false;
-
-            salvou = new ProdutoEnderecoPicking().gravaListaEndereco(lista);
-
-            return salvou;
+            return Json(new ProdutoEnderecoPicking().gravaListaEndereco(lista));
         }
 
         [HttpPut]
