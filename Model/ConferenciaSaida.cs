@@ -508,6 +508,108 @@ namespace ProjetoColetorApi.Model
                 connection.Dispose();
             }
         }
+
+        public Boolean ReabreConferenciaProduto(int numOs, int codProd)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleTransaction transacao = connection.BeginTransaction();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder updateOs = new StringBuilder();
+            StringBuilder updateVolume = new StringBuilder();
+
+            exec.Transaction = transacao;
+
+            try
+            {
+                updateOs.Append($"update pcmovendpend set qtconferida = null, dtinicioconferencia = null, dtfimconferencia = null, codfuncconf = null where numos = {numOs} and codprod = {codProd}");
+
+                exec.CommandText = updateOs.ToString();
+                OracleDataReader execUpdateOs = exec.ExecuteReader();
+
+                updateVolume.Append($"update pcvolumeos set datavolume = 'N', codfuncconf = null, dtconf = null where numos = {numOs} and numvol in (select numvol from pcvolumeosi where numos = {numOs} and codprod = {codProd})");
+                exec.CommandText = updateVolume.ToString();
+                OracleDataReader execUpdateVolume = exec.ExecuteReader();
+
+                transacao.Commit();
+
+                connection.Close();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return false;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return false;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean ReabreConferenciaOs(int numOs)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleTransaction transacao = connection.BeginTransaction();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder updateOs = new StringBuilder();
+            StringBuilder updateVolume = new StringBuilder();
+
+            exec.Transaction = transacao;
+
+            try
+            {
+                updateOs.Append($"update pcmovendpend set qtconferida = null, dtinicioconferencia = null, dtfimconferencia = null, codfuncconf = null where numos = {numOs}");
+
+                exec.CommandText = updateOs.ToString();
+                OracleDataReader execUpdateOs = exec.ExecuteReader();
+
+                updateVolume.Append($"update pcvolumeos set datavolume = 'N', codfuncconf = null, dtconf = null where numos = {numOs}");
+                exec.CommandText = updateVolume.ToString();
+                OracleDataReader execUpdateVolume = exec.ExecuteReader();
+
+                transacao.Commit();
+
+                connection.Close();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return false;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return false;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
     }
 }
 

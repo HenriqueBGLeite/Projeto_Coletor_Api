@@ -63,5 +63,19 @@ namespace ProjetoColetorApi.Controllers
         {
             return Json(new ConferenciaSaida().PendenciaOsCarregamento(numcar));
         }
+
+        [HttpPut]
+        [Route("{numOs}/{codProd}")]
+        public Boolean ReabreConferenciaProduto(int numos, int codprod)
+        {
+            return new ConferenciaSaida().ReabreConferenciaProduto(numos, codprod);
+        }
+
+        [HttpPut]
+        [Route("{numOs}")]
+        public Boolean ReabreConferenciaOs(int numos)
+        {
+            return new ConferenciaSaida().ReabreConferenciaOs(numos);
+        }
     }
 }
