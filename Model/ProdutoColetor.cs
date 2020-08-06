@@ -503,7 +503,7 @@ namespace ProjetoColetorApi.Model
                 query.Append("                     inner join pcprodutpicking pk on (rep.codprod = pk.codprod and rep.codfilial = pk.codfilial)");
                 query.Append("                     inner join pcendereco en on(pk.codendereco = en.codendereco and rep.codfilial = en.codfilial) ");
                 query.Append($"where rep.codfunclista = {codUsuario}");
-                query.Append("  and rep.dtconflista is null and rep.dtcancel is null ");
+                query.Append("  and rep.dtconflista is null and rep.dtcancel is null and pk.tipo = 'V' ");
                 query.Append("order by decode(en.tipoender, 'AP', 'AAP'), en.deposito, en.rua, case when mod(en.rua, 2) = 1 then en.predio end asc, case when mod(en.rua, 2) = 0 then en.predio end desc, en.nivel, en.apto");
 
 
@@ -590,7 +590,7 @@ namespace ProjetoColetorApi.Model
                 query.Append("                     inner join pcestendereco est on (en.codendereco = est.codendereco)");
                 query.Append("                     inner join pcprodut prod on (est.codprod = prod.codprod) ");
                 query.Append($"where ((prod.codprod = {produto}) or (prod.codauxiliar = {produto}) or (prod.codauxiliar2 = {produto}))");
-                query.Append($"  and en.codfilial = {filial}");
+                query.Append($"  and en.codfilial = {filial} and pk.tipo = 'V'");
                 query.Append(" order by en.deposito, en.rua, case when mod(en.rua, 2) = 1 then en.predio end asc, case when mod(en.rua, 2) = 0 then en.predio end desc, en.nivel, en.apto");
 
                 exec.CommandText = query.ToString();

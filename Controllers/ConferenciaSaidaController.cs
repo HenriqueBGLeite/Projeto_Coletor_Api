@@ -27,6 +27,12 @@ namespace ProjetoColetorApi.Controllers
             return Json(new ConferenciaSaida().ProdutoOsVolume(codBarra, numOs, numVol, filial));
         }
 
+        [Route("{codBarra}/{numOs}/{filial}")]
+        public JsonResult ProdutoOs(string codBarra, int numOs, int filial)
+        {
+            return Json(new ConferenciaSaida().ProdutoOs(codBarra, numOs, filial));
+        }
+
         [HttpPut]
         public Boolean ConfereVolumeCheckout([FromBody] ConferenciaSaida dados)
         {
@@ -40,9 +46,9 @@ namespace ProjetoColetorApi.Controllers
         }
 
         [Route("{numOs}/{numVol}")]
-        public JsonResult buscaQtOsPendente(int numOs, int numVol)
+        public JsonResult buscaQtVolumePendente(int numOs, int numVol)
         {
-            return Json(new ConferenciaSaida().buscaQtOsPendente(numOs, numVol));
+            return Json(new ConferenciaSaida().buscaQtVolumePendente(numOs, numVol));
         }
 
         [HttpPut]

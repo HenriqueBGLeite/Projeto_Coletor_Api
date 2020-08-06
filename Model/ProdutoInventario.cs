@@ -233,7 +233,7 @@ namespace ProjetoColetorApi.Model
 
                             query = new StringBuilder();
 
-                            query.Append($"UPDATE EPCTI.PCINVENTENDERECOI SET MATCONT = {codUsuario}, MATDIG = {codUsuario}, DTCONTINI = SYSDATE WHERE INVENTOS = {proxOs} AND CONTAGEM = {minimaContagem} AND DTCONTINI IS NULL");
+                            query.Append($"UPDATE EPCTI.PCINVENTENDERECOI SET MATDIG = {codUsuario} WHERE INVENTOS = {proxOs} AND CONTAGEM = {minimaContagem} AND DTCONTINI IS NULL");
 
                             exec.CommandText = query.ToString();
                             reader = exec.ExecuteReader();
