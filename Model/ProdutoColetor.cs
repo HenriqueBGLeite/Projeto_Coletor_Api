@@ -584,7 +584,7 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append($"select en.codendereco, prod.codprod, prod.descricao, case when {produto} = prod.codauxiliar2 then prod.qtunitcx else prod.qtunit end qt, ");
+                query.Append($"select en.codendereco, prod.codprod, prod.descricao, case when {produto} = prod.codauxiliar2 then prod.qtunitcx else 1 end qt, ");
                 query.Append("        en.deposito, en.rua, en.predio, en.nivel, en.apto, prod.codauxiliar as ean, prod.codauxiliar2 as dun, prod.qtunitcx");
                 query.Append("  from pcendereco en inner join pcprodutpicking pk on (en.codendereco = pk.codendereco and en.codfilial = pk.codfilial)");
                 query.Append("                     inner join pcestendereco est on (en.codendereco = est.codendereco)");
