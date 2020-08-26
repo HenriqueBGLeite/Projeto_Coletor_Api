@@ -45,10 +45,10 @@ namespace ProjetoColetorApi.Controllers
             return dados.ConfereVolumeCaixaFechada(dados);
         }
 
-        [Route("{numOs}/{numVol}")]
-        public JsonResult buscaQtVolumePendente(int numOs, int numVol)
+        [Route("{numOs}/{numBox}")]
+        public JsonResult buscaQtVolumePendente(int numOs, int numBox)
         {
-            return Json(new ConferenciaSaida().buscaQtVolumePendente(numOs, numVol));
+            return Json(new ConferenciaSaida().buscaQtVolumePendente(numOs, numBox));
         }
 
         [HttpPut]
