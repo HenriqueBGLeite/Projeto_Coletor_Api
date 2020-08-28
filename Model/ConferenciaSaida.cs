@@ -29,19 +29,32 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("select mov.numos, nvl(mov.numpalete,0) as numpalete, mov.numped, nvl(mov.numcar,0) as numcar, nvl(mov.numbox,0) as numbox, ");
-                query.Append($"      nvl((select numvol from pcvolumeos where numos = {numOs} and numvol = {numVol}), 1) as numvol,");
-                query.Append($"      mov.tipoos, (select count(*) from pcvolumeos where numos = {numOs}) as totalOs,");
-                query.Append($"      case when mov.tipoos <> 13 then nvl((select dtconf from  pcvolumeos where numos = {numOs} and numvol = {numVol}), mov.dtfimconferencia)");
-                query.Append($"                                 else (select dtconf from  pcvolumeos where numos = {numOs} and numvol = {numVol}) end dtconf,");
-                query.Append($"      case when mov.tipoos <> 13 then nvl((select codfuncconf from pcvolumeos where numos = {numOs} and numvol = {numVol}), mov.codfunccoferente)");
-                query.Append($"                                 else (select codfuncconf from pcvolumeos where numos = {numOs} and numvol = {numVol}) end codfuncconf,");
-                query.Append("       (select count(*) as pendencia from (select codprod from (select nvl(pedi.QT, 0) as qtped, codprod, nvl(pedi.qtconferida, 0) as qtconf from pcmovendpend pedi");
-                query.Append($"        where numos = {numOs} and nvl(pedi.qtconferida, 0) <> nvl(pedi.QT, 0)) where qtconf <> qtped group by codprod)) as pendencia,");
-                query.Append("       (select count(distinct numos) from pcmovendpend where numcar = mov.numcar and dtfimconferencia is null and dtestorno is null) as qtospendente");
-                query.Append("  from pcmovendpend mov ");
-                query.Append($"where mov.numos = {numOs}");
-                query.Append("   and rownum = 1");
+                query.Append("select os.numos, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia,");
+                query.Append("       (select count(distinct numos) from pcmovendpend where numcar = os.numcar and nvl(qt, 0) <> nvl(qtconferida, 0) and dtfimconferencia is null and dtestorno is null) as qtospendente");
+                query.Append("  from (select mov.numos, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
+                query.Append("               nvl(mov.numbox, 0) as numbox, nvl(vol.numvol, 1) as numvol, mov.tipoos, ");
+                query.Append("               case when mov.tipoos <> 13 then  nvl(vol.dtconf, mov.dtfimconferencia) else vol.dtconf end dtconf, ");
+                query.Append("               case when mov.tipoos <> 13 then nvl(vol.codfuncconf, mov.codfunccoferente) else vol.codfuncconf end codfuncconf, ");
+                query.Append("               nvl(pend.pendencia, 0) as pendencia, mov.codprod as prod_os, vol.codprod as prod_vol");
+                query.Append("          from pcmovendpend mov left outer join(select vos.numos, vos.numvol, vos.dtconf, vos.codfuncconf, vosi.codprod");
+                query.Append("                                                  from pcvolumeos vos, pcvolumeosi vosi");
+                query.Append("                                                 where vos.numos = vosi.numos(+)");
+                query.Append("                                                   and vos.numvol = vosi.numvol(+)");
+                query.Append($"                                                  and vos.numos = {numOs}");
+                query.Append($"                                                  and vos.numvol = {numVol}) vol on (mov.numos = vol.numos)");
+                query.Append("                                left outer join(select count(distinct codprod) pendencia, numos");
+                query.Append("                                                  from pcmovendpend ");
+                query.Append($"                                                where numos = {numOs}");
+                query.Append("                                                   and nvl(qt, 0) <> nvl(qtconferida, 0)");
+                query.Append("                                                   and dtfimconferencia is null");
+                query.Append("                                                   and dtestorno is null");
+                query.Append("                                                 group by numos");
+                query.Append("                                                ) pend on (mov.numos = pend.numos) ");
+                query.Append($"        where mov.numos = {numOs}");
+                query.Append("           and mov.dtestorno is null");
+                query.Append("         order by case when mov.codprod = vol.codprod then 0 else 1 end");
+                query.Append("       ) os ");
+                query.Append(" where os.prod_os = nvl(os.prod_vol, os.prod_os)");
 
                 exec.CommandText = query.ToString();
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
@@ -230,14 +243,13 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                dadosConf.Append("select numped, nvl(qtconferida,0) as qtconferida, nvl(qt,0) as qt, codendereco, ");
-                dadosConf.Append($"       (select count(*) from pcmovendpend where codprod = {dados.Codprod} and numos = {dados.Numos} and nvl(qtconferida, 0) <> nvl(QT, 0)) as contador, ");
-                dadosConf.Append("       (nvl(qt, 0) - nvl(qtconferida, 0)) as qt_sem_conf ");
+                dadosConf.Append("select numped, nvl(qtconferida,0) as qtconferida, nvl(qt,0) as qt, codendereco, count(*) as contador, (nvl(qt, 0) - nvl(qtconferida, 0)) as qt_sem_conf ");
                 dadosConf.Append("  from pcmovendpend ");
                 dadosConf.Append($"where codprod = {dados.Codprod}");
                 dadosConf.Append($"  and numos   = {dados.Numos}");
                 dadosConf.Append($"  and numbox  = {dados.Numbox}");
-                dadosConf.Append("   and nvl(qtconferida, 0) <> nvl(QT, 0)");
+                dadosConf.Append("   and nvl(qtconferida, 0) <> nvl(QT, 0) ");
+                dadosConf.Append("group by numped, nvl(qtconferida, 0), nvl(qt, 0), codendereco, (nvl(qt, 0) - nvl(qtconferida, 0))");
 
                 exec.CommandText = dadosConf.ToString();
                 OracleDataReader confDados = exec.ExecuteReader();
