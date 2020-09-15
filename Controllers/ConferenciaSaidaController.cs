@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -18,7 +21,25 @@ namespace ProjetoColetorApi.Controllers
         [Route("{numOs}/{numVol}")]
         public JsonResult CabecalhoOs(int numOs, int numVol)
         {
-            return Json(new ConferenciaSaida().CabecalhoOs(numOs, numVol));
+            DateTime start = DateTime.Now;
+
+            JsonResult resposta = Json(new ConferenciaSaida().CabecalhoOs(numOs, numVol));
+
+            DateTime endTime = DateTime.Now;
+
+            TimeSpan tempoTotal = endTime.Subtract(start);
+
+            if (tempoTotal.Seconds >= 2)
+            {
+                new ConferenciaSaida().EnviaEmail("O.S/Volume: " + numOs + "/" + numVol + " - Segundos: " + tempoTotal.Seconds + " / Milissegundos: " + tempoTotal.Milliseconds, "CabecalhoOs");
+            }
+                        
+            if (tempoTotal.Seconds >= 1)
+            {
+                new ConferenciaSaida().GravaLog(numOs, numVol, "CabecalhoOs", tempoTotal.Seconds, tempoTotal.Milliseconds, 0);
+            }
+
+            return resposta;
         }
 
         [Route("{codBarra}/{numOs}/{numVol}/{filial}")]
@@ -36,13 +57,49 @@ namespace ProjetoColetorApi.Controllers
         [HttpPut]
         public Boolean ConfereVolumeCheckout([FromBody] ConferenciaSaida dados)
         {
-            return dados.ConfereVolumeCheckout(dados);
+            DateTime start = DateTime.Now;
+
+            Boolean resposta = dados.ConfereVolumeCheckout(dados);
+
+            DateTime endTime = DateTime.Now;
+
+            TimeSpan tempoTotal = endTime.Subtract(start);
+
+            if (tempoTotal.Seconds >= 2)
+            {
+                new ConferenciaSaida().EnviaEmail("O.S/Volume: " + dados.Numos + "/" + dados.Numvol + " - Produto: " + dados.Codprod + " Segundos: " + tempoTotal.Seconds + " / Milissegundos: " + tempoTotal.Milliseconds, "ConfereVolumeCheckout");
+            }
+
+            if (tempoTotal.Seconds >= 1)
+            {
+                new ConferenciaSaida().GravaLog(dados.Numos, dados.Numvol, "ConfereVolumeCheckout", tempoTotal.Seconds, tempoTotal.Milliseconds, dados.Codprod);
+            }
+
+            return resposta;
         }
 
         [HttpPut]
         public Boolean ConfereVolumeCaixaFechada([FromBody] ConferenciaSaida dados)
         {
-            return dados.ConfereVolumeCaixaFechada(dados);
+            DateTime start = DateTime.Now;
+
+            Boolean resposta = dados.ConfereVolumeCaixaFechada(dados);
+
+            DateTime endTime = DateTime.Now;
+
+            TimeSpan tempoTotal = endTime.Subtract(start);
+
+            if (tempoTotal.Seconds >= 2)
+            {
+                new ConferenciaSaida().EnviaEmail("O.S/Volume: " + dados.Numos + "/" + dados.Numvol + " - Produto: " + dados.Codprod + " Segundos: " + tempoTotal.Seconds + " / Milissegundos: " + tempoTotal.Milliseconds, "ConfereVolumeCaixaFechada");
+            }
+
+                if (tempoTotal.Seconds >= 1)
+            {
+                new ConferenciaSaida().GravaLog(dados.Numos, dados.Numvol, "ConfereVolumeCaixaFechada", tempoTotal.Seconds, tempoTotal.Milliseconds, dados.Codprod);
+            }
+
+            return resposta;
         }
 
         [Route("{numOs}/{numBox}")]

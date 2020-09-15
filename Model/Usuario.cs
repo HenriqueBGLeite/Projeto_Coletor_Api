@@ -27,6 +27,9 @@ namespace ProjetoColetorApi.Model
         public string AcessoVerEndereco { get; set; }
         public string AcessoAltValInvent { get; set; }
         public string AcessoAltEmbProdBonus { get; set; }
+        public string AcessoArmazenagemTranspalete { get; set; }
+        public string AcessoArmazenagemEmpilhadeira { get; set; }
+        public string AcessoArmazenagemRepositor { get; set; }
         public string Base { get; set; }
         public string Token { get; set; }
         public string Erro { get; set; }
@@ -53,7 +56,10 @@ namespace ProjetoColetorApi.Model
                 query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 5 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_VER_LISTAENDERECO,");
                 query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 8 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_VER_ENDERECO,");
                 query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 9 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ALT_VAL_INVENT,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 11 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ATUALIZA_EMB_PROD_BONUS");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 11 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ATUALIZA_EMB_PROD_BONUS,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 14 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARM_TRANSPALETE,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 15 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARM_EMPILHADEIRA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 16 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARM_REPOSITOR");
                 query.Append("  FROM PCEMPR INNER JOIN FILIAIS ON(PCEMPR.CODFILIAL = FILIAIS.CODFIL)");
                 query.Append("              INNER JOIN PCFILIAL ON(PCFILIAL.CODIGO = PCEMPR.CODFILIAL)");
                 query.Append("              LEFT OUTER JOIN(SELECT IV.NUMINVENT AS NUMINVENT, USU.MATRICULA FROM PCINVENTENDERECO IV INNER JOIN PCEMPR USU ON(IV.CODFUNC = USU.MATRICULA)");
@@ -86,6 +92,9 @@ namespace ProjetoColetorApi.Model
                     usuario.AcessoVerEndereco = reader.GetString(14);
                     usuario.AcessoAltValInvent = reader.GetString(15);
                     usuario.AcessoAltEmbProdBonus = reader.GetString(16);
+                    usuario.AcessoArmazenagemTranspalete = reader.GetString(17);
+                    usuario.AcessoArmazenagemEmpilhadeira= reader.GetString(18);
+                    usuario.AcessoArmazenagemRepositor= reader.GetString(19);
                     usuario.Erro = "N";
                     usuario.Warning = "N";
 

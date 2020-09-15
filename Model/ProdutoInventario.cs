@@ -32,12 +32,12 @@ namespace ProjetoColetorApi.Model
         public string MensagemErroWarning { get; set; }
 
         //MÉTODOS PARA INVENTARIO COM WMS
-        public ProdutoInventario getProduto(string produto, int filial)
+        public ProdutoInventario GetProduto(string produto, int filial)
         {
             OracleConnection connection = DataBase.novaConexao();
             OracleCommand exec = connection.CreateCommand();
 
-            ProdutoInventario produtoInventario = new ProdutoInventario();
+            ProdutoInventario produtoInventario;
             StringBuilder query = new StringBuilder();
             ProdutoInventario pl = new ProdutoInventario();
 
@@ -103,7 +103,7 @@ namespace ProjetoColetorApi.Model
             }
 
         }
-        public Boolean gravaProduto(ProdutoInventario prod)
+        public Boolean GravaProduto(ProdutoInventario prod)
         {
             Boolean salvou = false;
             OracleConnection connection = DataBase.novaConexao();
@@ -186,7 +186,7 @@ namespace ProjetoColetorApi.Model
         public string Warning { get; set; }
         public string MensagemErroWarning { get; set; }
 
-        public DataTable getProxOs(string codUsuario, int codEndereco = -1, int contagem = -1)
+        public DataTable GetProxOs(string codUsuario, int codEndereco = -1, int contagem = -1)
         {
             OracleConnection connection = DataBase.novaConexao();
 
@@ -299,7 +299,7 @@ namespace ProjetoColetorApi.Model
     //METODOS PARA INVENTARIO SEM WMS (MRURAL)
     public class InventarioSemWms
     {
-        public DataTable buscaInventario(string filial, string matricula, string BASE)
+        public DataTable BuscaInventario(string filial, string matricula, string BASE)
         {
 
             DataTable tb = new DataTable("TESTE");

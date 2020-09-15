@@ -16,20 +16,20 @@ namespace ProjetoColetorApi.Controllers
         [HttpPost]
         public Boolean gravaProdutoInventario([FromBody] ProdutoInventario prod)
         {
-            Boolean salvou = prod.gravaProduto(prod);
+            Boolean salvou = prod.GravaProduto(prod);
             return salvou;
         }
 
         [Route("{produto}/{filial}")]
         public JsonResult getProdutoInventario(string produto, int filial)
         {
-            return Json(new ProdutoInventario().getProduto(produto, filial));
+            return Json(new ProdutoInventario().GetProduto(produto, filial));
         }
 
         [Route("{codUsuario}/{codEndereco?}/{contagem?}")]
         public JsonResult getProxOs(string codUsuario, int codEndereco = -1, int contagem = -1)
         {
-            return Json(new EnderecoInventario().getProxOs(codUsuario, codEndereco, contagem));
+            return Json(new EnderecoInventario().GetProxOs(codUsuario, codEndereco, contagem));
         }
 
         //MÉTODOS PARA INVENTARIO SEM WMS (MRURAL)

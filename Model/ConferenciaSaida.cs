@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Net.Mail;
+using System.Net;
 
 namespace ProjetoColetorApi.Model
 {
@@ -17,6 +19,101 @@ namespace ProjetoColetorApi.Model
         public int? Codprod { get; set; }
         public int? Numbox { get; set; }
         public int? Qtconf { get; set; }
+
+        public void EnviaEmail(String message, String metodo)
+        {
+            //crio objeto responsável pela mensagem de email
+            MailMessage objEmail = new MailMessage();
+
+            //rementente do email
+            objEmail.From = new MailAddress("bdepoca@epoca-distribuicao.com.br");
+
+            //email para resposta(quando o destinatário receber e clicar em responder, vai para:)
+            objEmail.ReplyTo = new MailAddress("ti0704@epoca-distribuicao.com.br");
+
+            //destinatário(s) do email(s). Obs. pode ser mais de um, pra isso basta repetir a linha
+            //abaixo com outro endereço
+            objEmail.To.Add("ti0704@epoca-distribuicao.com.br");
+
+            //se quiser enviar uma cópia oculta pra alguém, utilize a linha abaixo:
+            //objEmail.Bcc.Add("ti0704@epoca-distribuicao.com.br");
+
+            //prioridade do email
+            objEmail.Priority = MailPriority.Normal;
+
+            //utilize true pra ativar html no conteúdo do email, ou false, para somente texto
+            objEmail.IsBodyHtml = true;
+
+            //Assunto do email
+            objEmail.Subject = "API Coletor Web";
+
+            //corpo do email a ser enviado
+            objEmail.Body = "<html>" +
+                             "<body>" +
+                              "<h1>Atenção</h1>" +
+                               "<p>Analise performance Coletor Web. </p>" +
+                               "<p>Metodo: " + metodo + "</p>" +
+                               "<p>" + message + "</p>" +
+                               "<p>Data/Hora do evento: " + System.DateTime.Now + "</p>" +
+                               "<p>&nbsp;</p>" +
+                             "</body>" +
+                            "</html>";
+
+            //codificação do assunto do email para que os caracteres acentuados serem reconhecidos.
+            objEmail.SubjectEncoding = Encoding.GetEncoding("ISO-8859-1");
+
+            //codificação do corpo do emailpara que os caracteres acentuados serem reconhecidos.
+            objEmail.BodyEncoding = Encoding.GetEncoding("ISO-8859-1");
+
+            //cria o objeto responsável pelo envio do email
+            SmtpClient objSmtp = new SmtpClient();
+
+            //endereço do servidor SMTP(para mais detalhes leia abaixo do código)
+            objSmtp.Host = "mail.epoca-distribuicao.com.br";
+
+            //para envio de email autenticado, coloque login e senha de seu servidor de email
+            //para detalhes leia abaixo do código
+            objSmtp.Credentials = new NetworkCredential("ti0704", "hBgLEITE@360");
+
+            //envia o email
+            objSmtp.Send(objEmail);
+        }
+
+        public void GravaLog(int numOs, int numVol, string metodo, int segundos, int milessegundos, int? produto)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append("INSERT INTO TAB_LOG_API_COLETOR (DATALOG, NUMOS, NUMVOL, METODO, SEGUNDOS, MILESSEGUNDOS, PRODUTO)");
+                query.Append($"                        VALUES (SYSDATE, {numOs}, {numVol}, '{metodo}', {segundos}, {milessegundos}, {produto})");
+
+                exec.CommandText = query.ToString();
+                OracleDataReader gravaLog = exec.ExecuteReader();
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
 
         public DataTable CabecalhoOs(int numOs, int numVol)
         {
