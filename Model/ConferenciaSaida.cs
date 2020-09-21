@@ -585,8 +585,8 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("select tab_os.numpalete, tab_os.numos, tab_os.numvol, tab.codprod, tab.descricao, en.rua, en.predio, en.nivel, en.apto, tipo.descricao as tipoOs, func.nome as separador");
-                query.Append("  from (select mov.codfilial, mov.numos, osi.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("select tab_os.letra, tab_os.numpalete, tab_os.numos, tab_os.numvol, tab.codprod, tab.descricao, en.rua, en.predio, en.nivel, en.apto, tipo.descricao as tipoOs, func.nome as separador");
+                query.Append("  from (select mov.numped, os.letra, mov.codfilial, mov.numos, osi.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
                 query.Append("          from pcmovendpend mov inner join pcvolumeos os on (mov.numos = os.numos)");
                 query.Append("                                inner join pcvolumeosi osi on (os.numos = osi.numos and os.numvol = osi.numvol and mov.codprod = osi.codprod)");
                 query.Append($"        where mov.numos = {numOs}");
@@ -595,7 +595,7 @@ namespace ProjetoColetorApi.Model
                 
                 query.Append("        union ");
 
-                query.Append("        select mov.codfilial, mov.numos, 1 as numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("        select mov.numped, null as letra, mov.codfilial, mov.numos, 1 as numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
                 query.Append("          from pcmovendpend mov");
                 query.Append($"         where mov.numos = {numOs}");
                 query.Append("            and mov.tipoos = 17");
@@ -651,8 +651,8 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("SELECT TAB.NUMOS, TAB.NUMVOL, PROD.CODPROD, PROD.DESCRICAO, EN.RUA, EN.PREDIO, EN.NIVEL, EN.APTO, T.DESCRICAO AS TIPOOS, P.NOME AS SEPARADOR, NVL(TAB.NUMPALETE, 0) AS NUMPALETE ");
-                query.Append("  FROM (SELECT MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("SELECT TAB.LETRA, TAB.NUMOS, TAB.NUMVOL, PROD.CODPROD, PROD.DESCRICAO, EN.RUA, EN.PREDIO, EN.NIVEL, EN.APTO, T.DESCRICAO AS TIPOOS, P.NOME AS SEPARADOR, NVL(TAB.NUMPALETE, 0) AS NUMPALETE ");
+                query.Append("  FROM (SELECT MOV.NUMPED, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
                 query.Append("          FROM PCMOVENDPEND MOV INNER JOIN PCVOLUMEOS OS ON (MOV.NUMOS = OS.NUMOS)");
                 query.Append("                                INNER JOIN PCVOLUMEOSI OSI ON (OS.NUMOS = OSI.NUMOS AND OS.NUMVOL = OSI.NUMVOL AND MOV.CODPROD = OSI.CODPROD)");
                 query.Append($"        WHERE MOV.NUMCAR = {numcar}");
@@ -664,7 +664,7 @@ namespace ProjetoColetorApi.Model
                 
                 query.Append("        UNION ");
 
-                query.Append("        SELECT MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("        SELECT MOV.NUMPED, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
                 query.Append("          FROM PCMOVENDPEND MOV INNER JOIN PCVOLUMEOS OS ON (OS.NUMOS = MOV.NUMOS)");
                 query.Append($"        WHERE MOV.NUMCAR = {numcar}");
                 query.Append("           AND MOV.TIPOOS = '13'");
@@ -675,7 +675,7 @@ namespace ProjetoColetorApi.Model
 
                 query.Append("        UNION ");
 
-                query.Append("        SELECT MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, 1 AS NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("        SELECT MOV.NUMPED, NULL AS LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, 1 AS NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
                 query.Append("          FROM PCMOVENDPEND MOV");
                 query.Append($"        WHERE MOV.NUMCAR = {numcar}");
                 query.Append("           AND MOV.DTFIMCONFERENCIA IS NULL");
