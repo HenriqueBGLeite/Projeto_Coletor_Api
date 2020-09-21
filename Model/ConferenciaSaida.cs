@@ -645,7 +645,7 @@ namespace ProjetoColetorApi.Model
             OracleConnection connection = DataBase.novaConexao();
             OracleCommand exec = connection.CreateCommand();
 
-            DataTable divergenciaOs = new DataTable();
+            DataTable pendenciaOs = new DataTable();
 
             StringBuilder query = new StringBuilder();
 
@@ -691,22 +691,22 @@ namespace ProjetoColetorApi.Model
                 exec.CommandText = query.ToString();
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
                 oda.SelectCommand = exec;
-                oda.Fill(divergenciaOs);
+                oda.Fill(pendenciaOs);
 
-                return divergenciaOs;
+                return pendenciaOs;
             }
             catch (Exception ex)
             {
                 if (connection.State == ConnectionState.Open)
                 {
                     connection.Close();
-                    return divergenciaOs;
+                    return pendenciaOs;
                 }
 
                 exec.Dispose();
                 connection.Dispose();
 
-                return divergenciaOs;
+                return pendenciaOs;
             }
             finally
             {
