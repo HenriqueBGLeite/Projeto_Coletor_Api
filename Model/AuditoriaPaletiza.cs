@@ -208,13 +208,13 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("select os.numos, prod.codauxiliar2 as dun, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia as divergencia, pertenceCarga, reconferido, ");
+                query.Append("select os.numos, prod.codauxiliar2 as dun, qtconferida, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia as divergencia, pertenceCarga, reconferido, ");
                 query.Append("       (SELECT COUNT(*) AS os FROM pcmovendpend");
                 query.Append($"        WHERE numos = {dados.NumOs} AND dtfimconferencia IS NULL) AS osaberta,");
                 query.Append("       (select count(os.numvol) as divergencia");
                 query.Append("          from (select distinct numos from pcmovendpend where numcar = os.numcar and dtestorno is null) mov inner join pcvolumeos os on (mov.numos = os.numos)");
                 query.Append("         where os.dtconf2 is null) as qtospendente");
-                query.Append("  from (select mov.numos, mov.codprod, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
+                query.Append("  from (select mov.numos, mov.codprod, mov.qtconferida, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
                 query.Append("               nvl(mov.numbox, 0) as numbox, nvl(vol.numvol, 1) as numvol, mov.tipoos, ");
                 query.Append($"              case when mov.numcar = {dados.NumCar} then 'S' else 'N'end as pertenceCarga, ");
                 query.Append("               case when vol.dtconf2 is not null then 'S' else 'N' end as reconferido, ");
