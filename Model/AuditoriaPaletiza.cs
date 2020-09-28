@@ -199,9 +199,6 @@ namespace ProjetoColetorApi.Model
             OracleConnection connection = DataBase.novaConexao();
             OracleCommand exec = connection.CreateCommand();
 
-            string pertencecarga;
-            int osaberta;
-            string reconferido;
             DataTable osCabecalho = new DataTable();
 
             StringBuilder query = new StringBuilder();
@@ -243,41 +240,6 @@ namespace ProjetoColetorApi.Model
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
                 oda.SelectCommand = exec;
                 oda.Fill(osCabecalho);
-
-                /*
-                if (osCabecalho.Rows.Count > 0)
-                {
-                    pertencecarga = osCabecalho.Rows[0]["pertenceCarga"].ToString();
-                    osaberta = Convert.ToInt32(osCabecalho.Rows[0]["osaberta"]);
-                    reconferido = osCabecalho.Rows[0]["reconferido"].ToString();
-
-                    if (pertencecarga == "S")
-                    {
-                        if (osaberta == 0)
-                        {
-                            if (dados.TipoConferencia == "A" && reconferido == "N")
-                            {
-                                return osCabecalho;
-                            }
-                            else
-                            {
-                                string resposta = "O.S. já foi reconferida.";
-                                throw new Exception(resposta);
-                            }
-                        }
-                        else
-                        {
-                            string resposta = "É necessário realizar a conferência para auditar/paletizar.";
-                            throw new Exception(resposta);
-                        }
-                    }
-                    else
-                    {
-                        string resposta = "O.S. não pertence ao carregamento.";
-                        throw new Exception(resposta);
-                    }
-                } 
-                */
 
                 return osCabecalho;
             }
@@ -356,22 +318,6 @@ namespace ProjetoColetorApi.Model
                 query.Append("         order by case when mov.codprod = vol.codprod then 0 else 1 end");
                 query.Append("       ) os");
                 query.Append(" where os.prod_os = nvl(os.prod_vol, os.prod_os)");
-
-                /*
-                query.Append("SELECT nvl(pend.numcar, 0) AS numcar, nvl(pend.numpalete, 0) AS numpalete, pend.numos, nvl(pend.numbox, 0) AS numbox, pend.tipoos, v.numvol,");
-                query.Append($"      CASE WHEN pend.numcar = {dados.NumCar} THEN 'S' ELSE 'N' END AS pertenceCarga, ");
-                query.Append("       CASE WHEN datapalete IS NULL THEN 'N' ELSE 'S' END AS paletizado, ");
-                query.Append("       CASE WHEN codfuncmontapalete IS NULL THEN 'N' ELSE 'S' END AS atribuidoFunc, ");
-                query.Append("       (SELECT COUNT(*) AS os");
-                query.Append("          FROM pcmovendpend");
-                query.Append($"        WHERE numos = {dados.NumOs}");
-                query.Append("           AND dtfimconferencia IS NULL) AS osaberta");
-                query.Append("  FROM pcvolumeos V INNER JOIN pcmovendpend pend ON (pend.numos = v.numos) ");
-                query.Append($"WHERE v.numos = {dados.NumOs}");
-                query.Append($"  AND v.numvol = {dados.NumVol}");
-                query.Append($"  AND (v.codfuncmontapalete is null or v.codfuncmontapalete = {dados.CodFunc})");
-                query.Append($"  AND pend.codfilial = {dados.CodFilial}");
-                query.Append("   AND ROWNUM = 1");*/
 
                 exec.CommandText = query.ToString();
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
@@ -609,8 +555,9 @@ namespace ProjetoColetorApi.Model
                 query.Append("select tab_os.letra, tab_os.numpalete, tab_os.numos, tab_os.numvol, tab.codprod, tab.descricao, en.rua, en.predio, en.nivel, en.apto, tipo.descricao as tipoOs, func.nome as separador");
                 query.Append("  from (select mov.numped, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
                 query.Append("          from pcmovendpend mov inner join pcvolumeos os on (mov.numos = os.numos)");
-                query.Append("                                left outer join pcvolumeosi osi on (os.numos = osi.numos and os.numvol = osi.numvol and mov.codprod = osi.codprod)");
+                query.Append("                                inner join pcvolumeosi osi on (os.numos = osi.numos and os.numvol = osi.numvol and mov.codprod = osi.codprod)");
                 query.Append($"        where mov.numos = {numOs}");
+                query.Append("          and mov.tipoos = 20");
                 if (tipoConferencia == "P")
                 {
                         query.Append("   and os.datapalete IS NULL");
@@ -618,6 +565,21 @@ namespace ProjetoColetorApi.Model
                 else
                 {
                         query.Append("   and os.dtconf2 IS NULL");
+                }
+
+                query.Append("        union ");
+
+                query.Append("select mov.numped, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("          from pcmovendpend mov inner join pcvolumeos os on(mov.numos = os.numos)");
+                query.Append($"       where mov.numos = {numOs}");
+                query.Append("          and mov.tipoos = 13");
+                if (tipoConferencia == "P")
+                {
+                    query.Append("   and os.datapalete IS NULL");
+                }
+                else
+                {
+                    query.Append("   and os.dtconf2 IS NULL");
                 }
 
                 query.Append("        union ");
