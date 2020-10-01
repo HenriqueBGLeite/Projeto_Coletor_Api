@@ -67,5 +67,32 @@ namespace ProjetoColetorApi.Controllers
         {
             return new ConferenciaBonus().ConfereProdutoBonus(dados);
         }
+
+        [Route("{numBonus}")]
+        public JsonResult ExtratoBonus(int numBonus)
+        {
+            return Json(new ConferenciaBonus().ExtratoBonus(numBonus));
+        }
+
+        [HttpPut]
+        [Route("{numBonus}/{codProd}")]
+        public Boolean ReabreConfItemBonus(int numBonus, int codProd)
+        {
+            return new ConferenciaBonus().ReabreConfItemBonus(numBonus, codProd);
+        }
+
+        [HttpPut]
+        [Route("{numBonus}")]
+        public Boolean ReabreConfBonus(int numBonus)
+        {
+            return new ConferenciaBonus().ReabreConfBonus(numBonus);
+        }
+
+        [HttpPut]
+        [Route("{numBonus}/{codFilial}/{codFunc}")]
+        public string EnderecaBonus(int numBonus, int codFilial, int codFunc)
+        {
+            return new ConferenciaBonus().EnderecaBonus(numBonus, codFilial, codFunc);
+        }
     }
 }

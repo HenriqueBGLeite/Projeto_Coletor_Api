@@ -23,6 +23,7 @@ namespace ProjetoColetorApi.Model
         public int? Lastro { get; set; }
         public int? Camada { get; set; }
         public string Datavalidade { get; set; }
+        public Boolean Alteravalidade { get; set; }
         public int? Qtcx { get; set; }
         public int? Qtun{ get; set; }
         public int Total { get; set; }
@@ -132,10 +133,17 @@ namespace ProjetoColetorApi.Model
                 exec.Parameters.Add("P_QTCX", OracleDbType.Int32).Value = prod.Qtcx;
                 exec.Parameters.Add("P_ENDERECO", OracleDbType.Int32).Value = prod.CodEndereco;
                 exec.Parameters.Add("P_CONTAGEM", OracleDbType.Int32).Value = prod.Contagem;
-                exec.Parameters.Add("P_DTVALIDADE", OracleDbType.Varchar2).Value = prod.Datavalidade;
+                exec.Parameters.Add("P_DTVALIDADE", OracleDbType.Varchar2).Value = dtvalidade;
                 exec.Parameters.Add("P_MATDIG", OracleDbType.Int32).Value = prod.MatDig;
                 exec.Parameters.Add("P_STATUS", OracleDbType.Varchar2).Value = prod.Status;
-                exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = false;
+                if (prod.Alteravalidade)
+                {
+                    exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = true;
+                }
+                else
+                {
+                    exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = false;
+                }
 
                 exec.ExecuteNonQuery();
 

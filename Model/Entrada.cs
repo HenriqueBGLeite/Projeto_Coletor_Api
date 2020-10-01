@@ -123,7 +123,7 @@ namespace ProjetoColetorApi.Model
                 }
                 query.Append("   AND bo.databonus > sysdate-60");
                 query.Append("   AND w.dtcancel IS NULL");
-                query.Append("   AND bo.codfuncfecha IS NULL");
+                query.Append("   AND bo.dtfechamento IS NULL");
                 query.Append("   AND bo.codfunccancel IS NULL");
                 query.Append(" GROUP BY bo.numbonus, bo.placa");
                 query.Append(" ORDER BY bo.numbonus");
@@ -369,24 +369,24 @@ namespace ProjetoColetorApi.Model
             try
             {
 
-                query.Append("SELECT V.NUMBONUS, V.CODPROD, P.DESCRICAO, SUM(V.QT) QTENTRADA, SUM(BI.QTAVARIA) AS QTAVARIA, TO_DATE(DECODE(V.DATAVALIDADE, '30/12/1899', NULL, V.DATAVALIDADE)) DTVALIDADE, ");
-                query.Append("       CASE WHEN SUM(V.QT) = 0 THEN 'NÃO INICIADA'");
-                query.Append("            WHEN SUM(V.QT) <> BI.QTNF THEN 'PENDENTE'");
-                query.Append("            WHEN SUM(V.QT) = BI.QTNF THEN 'CONCLUIDO'");
+                query.Append("SELECT CONF.NUMBONUS, CONF.CODPROD, P.DESCRICAO, SUM(CONF.QT) QTENTRADA, SUM(BI.QTAVARIA) AS QTAVARIA, TO_DATE(DECODE(CONF.DATAVALIDADE, '30/12/1899', NULL, CONF.DATAVALIDADE)) DTVALIDADE, ");
+                query.Append("       CASE WHEN SUM(CONF.QT) = 0 THEN 'NÃO INICIADA'");
+                query.Append("            WHEN SUM(CONF.QT) <> BI.QTNF THEN 'PENDENTE'");
+                query.Append("            WHEN SUM(CONF.QT) = BI.QTNF THEN 'CONCLUIDO'");
                 query.Append("        END STATUS");
-                query.Append("  FROM PCBONUSI BI INNER JOIN PCBONUSICONF V ON(BI.NUMBONUS = V.NUMBONUS AND BI.CODPROD = V.CODPROD)");
-                query.Append("                   INNER JOIN PCPRODUT P ON(V.CODPROD = P.CODPROD)");
-                query.Append($"WHERE V.NUMBONUS = {numBonus}");
+                query.Append("  FROM PCBONUSI BI INNER JOIN PCBONUSICONF CONF ON (BI.NUMBONUS = CONF.NUMBONUS AND BI.CODPROD = CONF.CODPROD)");
+                query.Append("                   INNER JOIN PCPRODUT P ON (CONF.CODPROD = P.CODPROD)");
+                query.Append($"WHERE CONF.NUMBONUS = {numBonus}");
                 if (tipoBusca == "C")
                 {
-                query.Append("   AND NVL(V.ENDERECADO, 'N') = 'N'");
+                query.Append("   AND NVL(CONF.ENDERECADO, 'N') = 'N'");
                 }
                 else
                 {
-                query.Append("   AND NVL(V.ENDERECADO, 'N') = 'S'");
+                query.Append("   AND NVL(CONF.ENDERECADO, 'N') = 'S'");
                 }
-                query.Append(" GROUP BY V.NUMBONUS, V.CODPROD, P.DESCRICAO, V.DATAVALIDADE, BI.QTNF");
-                query.Append(" ORDER BY V.CODPROD");
+                query.Append(" GROUP BY CONF.NUMBONUS, CONF.CODPROD, P.DESCRICAO, CONF.DATAVALIDADE, BI.QTNF");
+                query.Append(" ORDER BY CONF.CODPROD");
 
                 exec.CommandText = query.ToString();
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
@@ -431,11 +431,13 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-
-                query.Append("SELECT BI.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM AS DESCRICAO, P.QTUNIT, P.QTUNITCX");
+                query.Append("SELECT BI.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM AS DESCRICAO, P.QTUNIT, P.QTUNITCX, PF.LASTROPAL AS LASTRO, PF.ALTURAPAL AS CAMADA, ");
+                query.Append("       PF.PRAZOVAL AS DIASVALIDADE, PF.PERCTOLERANCIAVAL AS SHELFLIFE, BI.QTNF, P.CODAUXILIAR, PF.QTTOTPAL AS NORMA, ROUND(MOD(BI.QTNF / PF.QTTOTPAL, 1), 6) AS RESTO");
                 query.Append("  FROM PCBONUSI BI INNER JOIN PCPRODUT P ON (BI.CODPROD = P.CODPROD)");
+                query.Append("                   INNER JOIN PCBONUSC BC ON (BI.NUMBONUS = BC.NUMBONUS)");
+                query.Append("                   INNER JOIN PCPRODFILIAL PF ON (P.CODPROD = PF.CODPROD AND BC.CODFILIAL = PF.CODFILIAL)");
                 query.Append($"WHERE BI.NUMBONUS = {numBonus}");
-                query.Append($"  AND ((CODAUXILIAR = {codBarra}) OR(CODAUXILIAR2 = {codBarra}))");
+                query.Append($"  AND ((P.CODAUXILIAR = {codBarra}) OR (P.CODAUXILIAR2 = {codBarra}))");
 
                 exec.CommandText = query.ToString();
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
@@ -474,14 +476,304 @@ namespace ProjetoColetorApi.Model
     {
         public int Numbonus { get; set; }
         public int Codprod{ get; set; }
+        public Int64 Codauxiliar { get; set; }
+        public int Qtnf { get; set; }
         public int Qtconf { get; set; }
         public int Qtavaria{ get; set; }
         public string Dtvalidade { get; set; }
         public int Codfuncconf { get; set; }
         public Boolean ConfereProdutoBonus(ConferenciaBonus dados)
         {
-            //Verificar se o produto existe na PCBONUSI
-            return true;
+            OracleConnection connection = DataBase.novaConexao();
+            OracleTransaction transacao = connection.BeginTransaction();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder conferenteCab = new StringBuilder();
+            StringBuilder confereBonusi = new StringBuilder();
+            StringBuilder confereBonusiConf = new StringBuilder();
+            StringBuilder confereBonusiVolume = new StringBuilder();
+
+            exec.Transaction = transacao;
+
+            try
+            {
+                //Atribui conferente no cabeçalho do bônus
+                conferenteCab.Append($"UPDATE PCBONUSC SET DATARM = TRUNC(SYSDATE), CODFUNCRM = {dados.Codfuncconf} WHERE NUMBONUS = {dados.Numbonus}");
+                exec.CommandText = conferenteCab.ToString();
+                OracleDataReader cabBonus = exec.ExecuteReader();
+
+                //Confere item na PCBONUSI
+                confereBonusi.Append($"UPDATE PCBONUSI SET QTENTRADA = QTENTRADA + {dados.Qtconf}, QTAVARIA = QTAVARIA + {dados.Qtavaria}, DTVALIDADE = TO_DATE('{dados.Dtvalidade}', 'DD/MM/YYYY') ");
+                confereBonusi.Append($" WHERE NUMBONUS = {dados.Numbonus} AND CODPROD = {dados.Codprod}");
+
+                exec.CommandText = confereBonusi.ToString();
+                OracleDataReader bonusi = exec.ExecuteReader();
+
+
+                //Confere item na PCBONUSICONF
+                confereBonusiConf.Append("INSERT INTO PCBONUSICONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, NUMLOTE, QT, QTAVARIA, CODAUXILIAR)");
+                confereBonusiConf.Append($"                 VALUES ({dados.Numbonus}, {dados.Codprod}, SYSDATE, TO_DATE('{dados.Dtvalidade}', 'DD/MM/YYYY'), {dados.Codfuncconf}, 1, {dados.Qtconf}, {dados.Qtavaria}, NULL)");
+
+                exec.CommandText = confereBonusiConf.ToString();
+                OracleDataReader bonusiconf = exec.ExecuteReader();
+
+                //Confere item na PCBONUSIVOLUME
+                confereBonusiVolume.Append("INSERT INTO PCBONUSIVOLUME (NUMBONUS, CODPROD, NUMLOTE, CODAGREGACAO, DTVALIDADE, QTPECAS, QTENTRADA, QTNF, TIPO, ");
+                confereBonusiVolume.Append("                            CODIGOUMA, ENDERECADO, CODMOTIVO, DTLANCAMENTO, CODFILIALESTOQUE, CODFILIALGESTAO, CODFUNCCONFERENTE)");
+                confereBonusiVolume.Append($"                   VALUES ({dados.Numbonus}, {dados.Codprod}, 1, NULL, TO_DATE('{dados.Dtvalidade}', 'DD/MM/YYYY'), 0, {dados.Qtconf}, {dados.Qtnf}, 'N', 0, 'N', 0, SYSDATE, NULL, NULL, {dados.Codfuncconf})");
+
+                exec.CommandText = confereBonusiVolume.ToString();
+                OracleDataReader bonusivolume = exec.ExecuteReader();
+
+                transacao.Commit();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    transacao.Rollback();
+                    connection.Close();
+                    throw new Exception(ex.ToString());
+                }
+
+                transacao.Rollback();
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public DataTable ExtratoBonus(int numBonus)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            DataTable extrato = new DataTable();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append("SELECT BI.CODPROD, P.DESCRICAO, TO_CHAR(C.DATAVALIDADE, 'DD/MM/YYYY') AS DATAVALIDADE, SUM(C.QT) QT, SUM(C.QTAVARIA) QTAVARIA, C.CODFUNCCONF || ' - ' || FUNC.NOME AS FUNCCONF, ");
+                query.Append("       PF.LASTROPAL AS LASTRO, PF.ALTURAPAL AS CAMADA");
+                query.Append("  FROM PCBONUSC BC INNER JOIN PCBONUSI BI ON (BC.NUMBONUS = BI.NUMBONUS)");
+                query.Append("                   INNER JOIN PCPRODUT P ON (BI.CODPROD = P.CODPROD)");
+                query.Append("                   INNER JOIN PCPRODFILIAL PF ON (P.CODPROD = PF.CODPROD AND BC.CODFILIAL = PF.CODFILIAL)");
+                query.Append("                   LEFT OUTER JOIN PCBONUSICONF C ON (BI.NUMBONUS = C.NUMBONUS AND BI.CODPROD = C.CODPROD)");
+                query.Append("                   LEFT OUTER JOIN PCEMPR FUNC ON (C.CODFUNCCONF = FUNC.MATRICULA)");
+                query.Append($"WHERE BC.NUMBONUS = {numBonus}");
+                query.Append(" GROUP BY BI.CODPROD, P.DESCRICAO, C.DATAVALIDADE, C.CODFUNCCONF, FUNC.NOME, PF.LASTROPAL, PF.ALTURAPAL");
+                query.Append(" ORDER BY BI.CODPROD");
+
+                exec.CommandText = query.ToString();
+                OracleDataAdapter oda = new OracleDataAdapter(exec);
+                oda.SelectCommand = exec;
+                oda.Fill(extrato);
+
+                return extrato;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean ReabreConfItemBonus(int numBonus, int codProd)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder reabreBonusi = new StringBuilder();
+            StringBuilder reabreBonusiConf = new StringBuilder();
+            StringBuilder reabreBonusiVolume = new StringBuilder();
+
+            try
+            {
+                reabreBonusi.Append($"UPDATE PCBONUSI SET QTENTRADA = (SELECT NVL(SUM(QTENTRADA), 0) FROM PCBONUSIVOLUME WHERE NUMBONUS = {numBonus} AND CODPROD = {codProd} AND ENDERECADO = 'S'), ");
+                reabreBonusi.Append($"                    QTAVARIA = 0, DTVALIDADE = NULL WHERE NUMBONUS = {numBonus} AND CODPROD = {codProd}");
+
+                exec.CommandText = reabreBonusi.ToString();
+                OracleDataReader bonusi = exec.ExecuteReader();
+
+
+                reabreBonusiConf.Append($"DELETE FROM PCBONUSICONF WHERE NUMBONUS = {numBonus} AND CODPROD = {codProd} AND ENDERECADO = 'N'");
+
+                exec.CommandText = reabreBonusiConf.ToString();
+                OracleDataReader bonusiconf = exec.ExecuteReader();
+
+                reabreBonusiVolume.Append($"DELETE FROM PCBONUSIVOLUME WHERE NUMBONUS = {numBonus} AND CODPROD = {codProd} AND ENDERECADO = 'N'");
+
+                exec.CommandText = reabreBonusiVolume.ToString();
+                OracleDataReader bonusivolume = exec.ExecuteReader();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean ReabreConfBonus(int numBonus)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder reabreBonusi = new StringBuilder();
+            StringBuilder reabreBonusiConf = new StringBuilder();
+            StringBuilder reabreBonusiVolume = new StringBuilder();
+
+            try
+            {
+                reabreBonusi.Append($"UPDATE PCBONUSI SET QTENTRADA = (SELECT NVL(SUM(QTENTRADA), 0) FROM PCBONUSIVOLUME WHERE NUMBONUS = {numBonus} AND CODPROD = PCBONUSI.CODPROD AND ENDERECADO = 'S'), ");
+                reabreBonusi.Append($"                    QTAVARIA = 0, DTVALIDADE = NULL WHERE NUMBONUS = {numBonus}");
+
+                exec.CommandText = reabreBonusi.ToString();
+                OracleDataReader bonusi = exec.ExecuteReader();
+
+
+                reabreBonusiConf.Append($"DELETE FROM PCBONUSICONF WHERE NUMBONUS = {numBonus} AND ENDERECADO = 'N'");
+
+                exec.CommandText = reabreBonusiConf.ToString();
+                OracleDataReader bonusiconf = exec.ExecuteReader();
+
+                reabreBonusiVolume.Append($"DELETE FROM PCBONUSIVOLUME WHERE NUMBONUS = {numBonus} AND ENDERECADO = 'N'");
+
+                exec.CommandText = reabreBonusiVolume.ToString();
+                OracleDataReader bonusivolume = exec.ExecuteReader();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public string EnderecaBonus(int numBonus, int codFilial, int codFunc)
+        {
+            string retorno;
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = new OracleCommand("FNC_ENDERECAMENTO_PROD", connection);
+
+            try
+            {
+                exec.CommandType = CommandType.StoredProcedure;
+
+                OracleParameter resposta = new OracleParameter("@Resposta", OracleDbType.Varchar2, 100);
+
+                resposta.Direction = ParameterDirection.ReturnValue;
+
+                exec.Parameters.Add(resposta);
+
+                exec.Parameters.Add("pFILIAL", OracleDbType.Int32).Value = codFilial;
+                exec.Parameters.Add("pNUMBONUS", OracleDbType.Int32).Value = numBonus;
+                exec.Parameters.Add("pCODFUNCCONFERENTE", OracleDbType.Int32).Value = codFunc;
+
+                exec.ExecuteNonQuery();
+
+                if (resposta.Value != DBNull.Value)
+                {
+                    
+                    retorno = resposta.Value.ToString();
+                    return retorno;
+                } 
+                else
+                {
+                    return "Erro no endereçamento. Tente novamente mais tarde.";
+                }
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
         }
     }
 }
