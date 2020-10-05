@@ -13,23 +13,24 @@ namespace ProjetoColetorApi.Model
         public int Code { get; set; }
         public string Password { get; set; }
         public string Nome { get; set; }
-        public string TipoConferencia { get; set; }
-        public string PermiteFecharBonus { get; set; }
-        public int DiasMinValidade { get; set; }
-        public string DigitaQt { get; set; }
         public string UsaWms { get; set; }
         public string AcessoSistema { get; set; }
-        public string AcessoDigQtInvent { get; set; }
-        public string AcessoConfBonus { get; set; }
-        public string AcessoConfPedido { get; set; }
-        public string AcessoAlterarProduto { get; set; }
-        public string AcessoListaEndereco { get; set; }
-        public string AcessoVerEndereco { get; set; }
-        public string AcessoAltValInvent { get; set; }
-        public string AcessoAltEmbProdBonus { get; set; }
-        public string AcessoArmazenagemTranspalete { get; set; }
-        public string AcessoArmazenagemEmpilhadeira { get; set; }
-        public string AcessoArmazenagemRepositor { get; set; }
+        public string AcessoEntrada { get; set; }
+        public string AcessoConferirBonusEntrada { get; set; }
+        public string AcessoConferirBonusDevolucao { get; set; }
+        public string AcessoConferirUma { get; set; }
+        public string AcessoConferirCaixaPlastica { get; set; }
+        public string AcessoSaida { get; set; }
+        public string AcessoConferirOs { get; set; }
+        public string AcessoPaletizarCarga { get; set; }
+        public string AcessoAuditarCarregamento { get; set; }
+        public string AcessoArmazenagem{ get; set; }
+        public string AcessoOperadorTranspalete { get; set; }
+        public string AcessoOperadorEmpilhadeira { get; set; }
+        public string AcessoRepositorMercadoria { get; set; }
+        public string AcessoDadosProduto { get; set; }
+        public string AcessoListarEnderecos { get; set; }
+        public string AcessoInventario { get; set; }
         public string Base { get; set; }
         public string Token { get; set; }
         public string Erro { get; set; }
@@ -46,26 +47,30 @@ namespace ProjetoColetorApi.Model
 
                 OracleCommand cmd = con.CreateCommand();
 
-                query.Append("SELECT TO_NUMBER(PCEMPR.CODFILIAL) AS FILIAL, PCEMPR.MATRICULA AS CODIGO, CASE WHEN INSTR(PCEMPR.NOME, ' ') = 0 THEN TRIM(PCEMPR.NOME) ELSE TRIM(SUBSTR(PCEMPR.NOME,1,(INSTR(PCEMPR.NOME, ' ')))) END NOME,");
-                query.Append("       FILIAIS.TIPOCONFERENCIA, FILIAIS.PERMITIR_FECHAR_BONUS, FILIAIS.DIASMINVALIDADE, FILIAIS.DIGITAQT, nvl(USAWMS, 'N') AS USAWMS,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTRO WHERE CODUSUARIO = PCEMPR.MATRICULA AND CODROTINA = 9844), 'N') AS ACESSSOSISTEMA,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 1 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_DIG_QT_INVENT,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 2 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_CONF_BONUS,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 3 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_CONF_PEDIDO,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 4 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ALTERAR_PRODUTO,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 5 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_VER_LISTAENDERECO,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 8 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_VER_ENDERECO,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 9 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ALT_VAL_INVENT,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 11 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ATUALIZA_EMB_PROD_BONUS,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 14 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARM_TRANSPALETE,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 15 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARM_EMPILHADEIRA,");
-                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 16 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARM_REPOSITOR");
-                query.Append("  FROM PCEMPR INNER JOIN FILIAIS ON(PCEMPR.CODFILIAL = FILIAIS.CODFIL)");
-                query.Append("              INNER JOIN PCFILIAL ON(PCFILIAL.CODIGO = PCEMPR.CODFILIAL)");
-                query.Append("              LEFT OUTER JOIN(SELECT IV.NUMINVENT AS NUMINVENT, USU.MATRICULA FROM PCINVENTENDERECO IV INNER JOIN PCEMPR USU ON(IV.CODFUNC = USU.MATRICULA)");
-                query.Append($"                              WHERE IV.DTATUALIZACAO IS NULL AND USU.MATRICULA = { usuario.Code } ");
-                query.Append("                                 AND ROWNUM = 1");
-                query.Append("                               ORDER BY DECODE(IV.CODFILIAL, USU.CODFILIAL, 'S', 'N')) INVENT ON(PCEMPR.MATRICULA = INVENT.MATRICULA)");
+                query.Append("SELECT TO_NUMBER(PCEMPR.CODFILIAL) AS FILIAL, PCEMPR.MATRICULA AS CODIGO, ");
+                query.Append("       CASE WHEN INSTR(PCEMPR.NOME, ' ') = 0 THEN TRIM(PCEMPR.NOME) ELSE TRIM(SUBSTR(PCEMPR.NOME,1,(INSTR(PCEMPR.NOME, ' ')))) END NOME, NVL(USAWMS, 'N') AS USAWMS,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTRO WHERE CODUSUARIO = PCEMPR.MATRICULA AND CODROTINA = 9844), 'N') AS ACESSO_SISTEMA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 14 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ENTRADA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 15 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_BONUS_ENTRADA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 16 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_BONUS_DEVOLUCAO,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 17 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_CONFERIR_UMA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 18 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_CONFERIR_CX_PLASTICA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 19 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_SAIDA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 20 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_CONFERIR_OS,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 21 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_PALETIZAR_CARGA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 22 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_AUDITAR_CARREGAMENTO,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 23 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_ARMAZENAGEM,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 24 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_OPERADOR_TRANSPALETE,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 25 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_OPERADOR_EMPILHADEIRA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 26 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_REPOSITOR_MERCADORIA,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 27 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_DADOS_PRODUTO,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 28 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_LISTAR_ENDERECOS,");
+                query.Append("       NVL((SELECT ACESSO FROM PCCONTROI WHERE PCCONTROI.CODCONTROLE = 29 AND PCCONTROI.CODROTINA = 9844 AND PCCONTROI.CODUSUARIO = PCEMPR.MATRICULA),'N') AS ACESSO_INVENTARIO");
+                query.Append("  FROM PCEMPR INNER JOIN PCFILIAL ON (PCFILIAL.CODIGO = PCEMPR.CODFILIAL)");
+                query.Append("              LEFT OUTER JOIN (SELECT IV.NUMINVENT AS NUMINVENT, USU.MATRICULA FROM PCINVENTENDERECO IV INNER JOIN PCEMPR USU ON (IV.CODFUNC = USU.MATRICULA)");
+                query.Append($"                               WHERE IV.DTATUALIZACAO IS NULL AND USU.MATRICULA = { usuario.Code } ");
+                query.Append("                                  AND ROWNUM = 1");
+                query.Append("                                ORDER BY DECODE(IV.CODFILIAL, USU.CODFILIAL, 'S', 'N')) INVENT ON (PCEMPR.MATRICULA = INVENT.MATRICULA)");
                 query.Append($"WHERE NVL(PCEMPR.CODBARRA, PCEMPR.MATRICULA) = { usuario.Code }");
                 query.Append($"  AND DECRYPT(PCEMPR.SENHABD, PCEMPR.USUARIOBD) = UPPER('{ usuario.Password }')");
 
@@ -74,33 +79,46 @@ namespace ProjetoColetorApi.Model
 
                 if (reader.Read())
                 {
-                    usuario.Filial = reader.GetInt32(0);
-                    usuario.Code = reader.GetInt32(1);
-                    usuario.Password = "";
-                    usuario.Nome = reader.GetString(2);
-                    usuario.TipoConferencia = reader.GetString(3);
-                    usuario.PermiteFecharBonus = reader.GetString(4);
-                    usuario.DiasMinValidade = reader.GetInt32(5);
-                    usuario.DigitaQt = reader.GetString(6);
-                    usuario.UsaWms = reader.GetString(7);
-                    usuario.AcessoSistema = reader.GetString(8);
-                    usuario.AcessoDigQtInvent = reader.GetString(9);
-                    usuario.AcessoConfBonus = reader.GetString(10);
-                    usuario.AcessoConfPedido = reader.GetString(11);
-                    usuario.AcessoAlterarProduto = reader.GetString(12);
-                    usuario.AcessoListaEndereco = reader.GetString(13);
-                    usuario.AcessoVerEndereco = reader.GetString(14);
-                    usuario.AcessoAltValInvent = reader.GetString(15);
-                    usuario.AcessoAltEmbProdBonus = reader.GetString(16);
-                    usuario.AcessoArmazenagemTranspalete = reader.GetString(17);
-                    usuario.AcessoArmazenagemEmpilhadeira= reader.GetString(18);
-                    usuario.AcessoArmazenagemRepositor= reader.GetString(19);
-                    usuario.Erro = "N";
-                    usuario.Warning = "N";
+                    if (reader.GetString(4) == "S")
+                    {
+                        usuario.Filial = reader.GetInt32(0);
+                        usuario.Code = reader.GetInt32(1);
+                        usuario.Password = "";
+                        usuario.Nome = reader.GetString(2);
+                        usuario.UsaWms = reader.GetString(3);
+                        usuario.AcessoSistema = reader.GetString(4);
+                        usuario.AcessoEntrada = reader.GetString(5);
+                        usuario.AcessoConferirBonusEntrada = reader.GetString(6);
+                        usuario.AcessoConferirBonusDevolucao= reader.GetString(7);
+                        usuario.AcessoConferirUma = reader.GetString(8);
+                        usuario.AcessoConferirCaixaPlastica = reader.GetString(9);
+                        usuario.AcessoSaida = reader.GetString(10);
+                        usuario.AcessoConferirOs = reader.GetString(11);
+                        usuario.AcessoPaletizarCarga = reader.GetString(12);
+                        usuario.AcessoAuditarCarregamento = reader.GetString(13);
+                        usuario.AcessoArmazenagem = reader.GetString(14);
+                        usuario.AcessoOperadorTranspalete= reader.GetString(15);
+                        usuario.AcessoOperadorEmpilhadeira = reader.GetString(16);
+                        usuario.AcessoRepositorMercadoria = reader.GetString(17);
+                        usuario.AcessoDadosProduto = reader.GetString(18);
+                        usuario.AcessoListarEnderecos = reader.GetString(19);
+                        usuario.AcessoInventario = reader.GetString(20);
+                        usuario.Erro = "N";
+                        usuario.Warning = "N";
 
-                    con.Close();
+                        con.Close();
 
-                    return usuario;
+                        return usuario;
+                    }
+                    else {
+                        usuario.Erro = "N";
+                        usuario.Warning = "S";
+                        usuario.MensagemErroWarning = "Usuário sem acesso ao sistema.";
+
+                        con.Close();
+
+                        return usuario;
+                    }
                 }
                 else
                 {
