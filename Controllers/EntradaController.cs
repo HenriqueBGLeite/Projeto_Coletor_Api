@@ -19,6 +19,19 @@ namespace ProjetoColetorApi.Controllers
             return new Entrada().ConfereCxPlastica(numOs, numVol, codFuncConf);
         }
 
+        [Route("{codigoUma}")]
+        public JsonResult BuscaUma(Int64 codigoUma)
+        {
+            return Json(new Entrada().BuscaUma(codigoUma));
+        }
+
+        [Route("{numBonus}/{codigoUma}/{codBarra}/{qtConf}/{dataValidade}/{codFuncConf}")]
+        [HttpPost]
+        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codFuncConf)
+        {
+            return new Entrada().ConfereUma(numBonus, codigoUma, codBarra, qtConf, dataValidade, codFuncConf);
+        }
+
         [Route("{tipoBonus}/{codFilial}")]
         public JsonResult BuscaCabBonus(string tipoBonus, int codFilial)
         {

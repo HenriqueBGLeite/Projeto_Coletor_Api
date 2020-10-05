@@ -96,7 +96,100 @@ namespace ProjetoColetorApi.Model
                 connection.Dispose();
             }
         }
-        
+
+        public DataTable BuscaUma(Int64 codigoUma)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            DataTable cabUma = new DataTable();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append("SELECT MOV.NUMBONUS, MOV.CODIGOUMA, MOV.CODPROD, P.CODAUXILIAR AS EAN, CODAUXILIAR2 AS DUN, MOV.QT, MOV.DTVALIDADE, CONF.DATACONF, CONF.CODFUNCCONF");
+                query.Append("  FROM PCMOVENDPEND MOV INNER JOIN PCPRODUT P ON(MOV.CODPROD = P.CODPROD) ");
+                query.Append("                        LEFT OUTER JOIN TAB_ENDERECAMENTO_CONF CONF ON(MOV.NUMBONUS = CONF.NUMBONUS AND MOV.CODIGOUMA = CONF.CODIGOUMA)");
+                query.Append($"WHERE MOV.CODIGOUMA = {codigoUma}");
+                query.Append("   AND MOV.DTESTORNO IS NULL");
+
+                exec.CommandText = query.ToString();
+                OracleDataAdapter oda = new OracleDataAdapter(exec);
+                oda.SelectCommand = exec;
+                oda.Fill(cabUma);
+
+                return cabUma;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codFuncConf)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append("INSERT INTO TAB_ENDERECAMENTO_CONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, CODIGOUMA, QT)");
+                query.Append($"                           VALUES ({numBonus}, {codBarra}, SYSDATE, TO_DATE('{dataValidade}', 'DD/MM/YYYY'), {codFuncConf}, {codigoUma}, {qtConf})");
+
+                exec.CommandText = query.ToString();
+                OracleDataReader insereConfUma = exec.ExecuteReader();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return false;
+
+                    throw new Exception(ex.Message);
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return false;
+                throw new Exception(ex.Message);
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
         public DataTable BuscaCabBonus(string tipoBonus, int codFilial)
         {
             OracleConnection connection = DataBase.novaConexao();
