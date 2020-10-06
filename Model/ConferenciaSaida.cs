@@ -127,25 +127,55 @@ namespace ProjetoColetorApi.Model
             try
             {
                 query.Append("select os.numos, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia,");
-                query.Append("       (select count(distinct numos) from pcmovendpend where numcar = os.numcar and nvl(qt, 0) <> nvl(qtconferida, 0) and dtfimconferencia is null and dtestorno is null) as qtospendente");
+                query.Append("       (select count (numos) as tot_pend from (select distinct numos");
+                query.Append("                                                 from pcmovendpend");
+                query.Append("                                                where numcar = os.numcar");
+                query.Append("                                                  and nvl(qt, 0) <> nvl(qtconferida, 0)");
+                query.Append("                                                  and dtfimconferencia is null");
+                query.Append("                                                  and dtestorno is null");
+                query.Append("                                                  and tipoos <> 13");
+
+                query.Append("                                               union");
+
+                query.Append("                                               select distinct mov.numos");
+                query.Append("                                                 from pcmovendpend mov inner join pcvolumeos os on (os.numos = mov.numos)");
+                query.Append("                                                where mov.numcar = os.numcar");
+                query.Append("                                                  and mov.tipoos = '13'");
+                query.Append("                                                  and mov.dtestorno is null");
+                query.Append("                                                  and ((os.dtconf is null and os.codfuncconf is null) or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)))");
+                query.Append("                                                  and os.datavolume = 'N')");
+                query.Append("       ) as qtospendente");
                 query.Append("  from (select mov.numos, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
                 query.Append("               nvl(mov.numbox, 0) as numbox, nvl(vol.numvol, 1) as numvol, mov.tipoos, ");
                 query.Append("               case when mov.tipoos <> 13 then  nvl(vol.dtconf, mov.dtfimconferencia) else vol.dtconf end dtconf, ");
                 query.Append("               case when mov.tipoos <> 13 then nvl(vol.codfuncconf, mov.codfunccoferente) else vol.codfuncconf end codfuncconf, ");
                 query.Append("               nvl(pend.pendencia, 0) as pendencia, mov.codprod as prod_os, vol.codprod as prod_vol");
-                query.Append("          from pcmovendpend mov left outer join(select vos.numos, vos.numvol, vos.dtconf, vos.codfuncconf, vosi.codprod");
+                query.Append("          from pcmovendpend mov left outer join (select vos.numos, vos.numvol, vos.dtconf, vos.codfuncconf, vosi.codprod");
                 query.Append("                                                  from pcvolumeos vos, pcvolumeosi vosi");
                 query.Append("                                                 where vos.numos = vosi.numos(+)");
                 query.Append("                                                   and vos.numvol = vosi.numvol(+)");
                 query.Append($"                                                  and vos.numos = {numOs}");
                 query.Append($"                                                  and vos.numvol = {numVol}) vol on (mov.numos = vol.numos)");
-                query.Append("                                left outer join(select count(distinct codprod) pendencia, numos");
-                query.Append("                                                  from pcmovendpend ");
-                query.Append($"                                                where numos = {numOs}");
-                query.Append("                                                   and nvl(qt, 0) <> nvl(qtconferida, 0)");
-                query.Append("                                                   and dtfimconferencia is null");
-                query.Append("                                                   and dtestorno is null");
-                query.Append("                                                 group by numos");
+                query.Append("                                left outer join (select pendencia, numos ");
+                query.Append("                                                  from (select count(distinct codprod) pendencia, numos");
+                query.Append("                                                          from pcmovendpend");
+                query.Append($"                                                        where numos = {numOs}");
+                query.Append("                                                           and nvl(qt, 0) <> nvl(qtconferida, 0)");
+                query.Append("                                                           and dtfimconferencia is null");
+                query.Append("                                                           and dtestorno is null");
+                query.Append("                                                           and tipoos<> 13");
+                query.Append("                                                         group by numos");
+
+                query.Append("                                                        union");
+
+                query.Append("                                                        select count(distinct mov.codprod) pendencia, mov.numos");
+                query.Append("                                                          from pcmovendpend mov inner join pcvolumeos os on(os.numos = mov.numos)");
+                query.Append($"                                                        where mov.numos = {numOs}");
+                query.Append("                                                           and ((os.dtconf is null and os.codfuncconf is null) or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)))");
+                query.Append("                                                           and mov.dtestorno is null");
+                query.Append("                                                           and os.datavolume = 'N'");
+                query.Append("                                                           and mov.tipoos = 13");
+                query.Append("                                                         group by mov.numos)");
                 query.Append("                                                ) pend on (mov.numos = pend.numos) ");
                 query.Append($"        where mov.numos = {numOs}");
                 query.Append("           and mov.dtestorno is null");
@@ -590,9 +620,19 @@ namespace ProjetoColetorApi.Model
                 query.Append("          from pcmovendpend mov inner join pcvolumeos os on (mov.numos = os.numos)");
                 query.Append("                                inner join pcvolumeosi osi on (os.numos = osi.numos and os.numvol = osi.numvol and mov.codprod = osi.codprod)");
                 query.Append($"        where mov.numos = {numOs}");
+                query.Append("           and mov.tipoos = 20");
                 query.Append("           and nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)");
                 query.Append("           and nvl(os.datavolume, 'N') = 'N'");
-                
+
+                query.Append("        union ");
+
+                query.Append("        select mov.numped, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("          from pcmovendpend mov inner join pcvolumeos os on (mov.numos = os.numos)");
+                query.Append($"        where mov.numos = {numOs}");
+                query.Append("           and ((os.dtconf is null and os.codfuncconf is null) or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)))");
+                query.Append("           and mov.tipoos = 13");
+                query.Append("           and nvl(os.datavolume, 'N') = 'N'");
+
                 query.Append("        union ");
 
                 query.Append("        select mov.numped, null as letra, mov.codfilial, mov.numos, 1 as numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");

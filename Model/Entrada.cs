@@ -146,20 +146,25 @@ namespace ProjetoColetorApi.Model
             }
         }
 
-        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codFuncConf)
+        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codBox, int codFuncConf)
         {
             OracleConnection connection = DataBase.novaConexao();
             OracleCommand exec = connection.CreateCommand();
 
-            StringBuilder query = new StringBuilder();
+            StringBuilder insereConferencia = new StringBuilder();
+            StringBuilder registraBox = new StringBuilder();
 
             try
             {
-                query.Append("INSERT INTO TAB_ENDERECAMENTO_CONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, CODIGOUMA, QT)");
-                query.Append($"                           VALUES ({numBonus}, {codBarra}, SYSDATE, TO_DATE('{dataValidade}', 'DD/MM/YYYY'), {codFuncConf}, {codigoUma}, {qtConf})");
+                insereConferencia.Append("INSERT INTO TAB_ENDERECAMENTO_CONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, CODIGOUMA, QT)");
+                insereConferencia.Append($"                           VALUES ({numBonus}, {codBarra}, SYSDATE, TO_DATE('{dataValidade}', 'DD/MM/YYYY'), {codFuncConf}, {codigoUma}, {qtConf})");
 
-                exec.CommandText = query.ToString();
+                exec.CommandText = insereConferencia.ToString();
                 OracleDataReader insereConfUma = exec.ExecuteReader();
+
+                registraBox.Append($"UPDATE PCMOVENDPEND SET CODBOX = {codBox}, NUMBOX = {codBox} WHERE NUMBONUS = {numBonus} AND CODIGOUMA = {codigoUma} AND DTESTORNO IS NULL");
+                exec.CommandText = registraBox.ToString();
+                OracleDataReader insereBoxUma = exec.ExecuteReader();
 
                 return true;
             }

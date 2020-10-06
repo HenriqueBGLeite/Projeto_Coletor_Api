@@ -25,11 +25,11 @@ namespace ProjetoColetorApi.Controllers
             return Json(new Entrada().BuscaUma(codigoUma));
         }
 
-        [Route("{numBonus}/{codigoUma}/{codBarra}/{qtConf}/{dataValidade}/{codFuncConf}")]
+        [Route("{numBonus}/{codigoUma}/{codBarra}/{qtConf}/{dataValidade}/{codBox}/{codFuncConf}")]
         [HttpPost]
-        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codFuncConf)
+        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codBox, int codFuncConf)
         {
-            return new Entrada().ConfereUma(numBonus, codigoUma, codBarra, qtConf, dataValidade, codFuncConf);
+            return new Entrada().ConfereUma(numBonus, codigoUma, codBarra, qtConf, dataValidade, codBox, codFuncConf);
         }
 
         [Route("{tipoBonus}/{codFilial}")]
