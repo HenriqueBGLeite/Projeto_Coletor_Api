@@ -42,6 +42,26 @@ namespace ProjetoColetorApi.Controllers
             return Json(new AuditoriaPaletiza().CabecalhoOs(dados));       
         }
 
+        [Route("{numCar}/{numOs}")]
+        public JsonResult BuscaPendDiverg(int numCar, Int32 numOs)
+        {
+            try
+            {
+                return Json(new BuscaPendenciaDivergencia().BuscaPendDiverg(numCar, numOs));
+            }
+            catch (Exception ex)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                return Json(ex.Message);
+            }
+        }
+
+        [Route("{numOs}")]
+        public Boolean ConsultaCorte(int numOs)
+        {
+            return new AuditoriaPaletiza().ConsultaCorte(numOs);
+        }
+
         [HttpPut]
         [Route("{numOs}/{numVol}/{codFunc}")]
         public JsonResult AuditaVolumeOs(int numos, int numVol, int codFunc)

@@ -17,7 +17,7 @@ namespace ProjetoColetorApi.Controllers
         [HttpPut]
         public Boolean editaDadosProd([FromBody] ProdutoColetor prod)
         {
-            Boolean salvou = false;
+            Boolean salvou;
 
             salvou = prod.editaDados(prod);
 
@@ -75,18 +75,28 @@ namespace ProjetoColetorApi.Controllers
         [HttpPut]
         public Boolean finalizaConfListagem([FromBody] ProdutoEnderecoPicking lista)
         {
-            Boolean salvou = false;
+            Boolean salvou;
 
             salvou = new ProdutoEnderecoPicking().finalizaConfListagem(lista);
 
             return salvou;
         }
 
+        [Route("{numLista}")]
+        public Boolean VerificaListagem(int numLista)
+        {
+            Boolean aberto;
+
+            aberto = new ProdutoEnderecoPicking().VerificaListagem(numLista);
+
+            return aberto;
+        }
+
         [HttpPut]
         [Route("{numLista}")]
         public Boolean cancelarListagem(int numLista)
         {
-            Boolean cancelado = false;
+            Boolean cancelado;
 
             cancelado = new ProdutoEnderecoPicking().cancelarListagem(numLista);
 

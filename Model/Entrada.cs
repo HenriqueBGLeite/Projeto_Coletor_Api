@@ -97,103 +97,6 @@ namespace ProjetoColetorApi.Model
             }
         }
 
-        public DataTable BuscaUma(Int64 codigoUma)
-        {
-            OracleConnection connection = DataBase.novaConexao();
-            OracleCommand exec = connection.CreateCommand();
-
-            DataTable cabUma = new DataTable();
-
-            StringBuilder query = new StringBuilder();
-
-            try
-            {
-                query.Append("SELECT MOV.NUMBONUS, MOV.CODIGOUMA, MOV.CODPROD, P.CODAUXILIAR AS EAN, CODAUXILIAR2 AS DUN, MOV.QT, MOV.DTVALIDADE, CONF.DATACONF, CONF.CODFUNCCONF");
-                query.Append("  FROM PCMOVENDPEND MOV INNER JOIN PCPRODUT P ON(MOV.CODPROD = P.CODPROD) ");
-                query.Append("                        LEFT OUTER JOIN TAB_ENDERECAMENTO_CONF CONF ON(MOV.NUMBONUS = CONF.NUMBONUS AND MOV.CODIGOUMA = CONF.CODIGOUMA)");
-                query.Append($"WHERE MOV.CODIGOUMA = {codigoUma}");
-                query.Append("   AND MOV.DTESTORNO IS NULL");
-
-                exec.CommandText = query.ToString();
-                OracleDataAdapter oda = new OracleDataAdapter(exec);
-                oda.SelectCommand = exec;
-                oda.Fill(cabUma);
-
-                return cabUma;
-            }
-            catch (Exception ex)
-            {
-                if (connection.State == ConnectionState.Open)
-                {
-                    connection.Close();
-
-                    throw new Exception(ex.ToString());
-                }
-
-                exec.Dispose();
-                connection.Dispose();
-
-                throw new Exception(ex.ToString());
-            }
-            finally
-            {
-                if (connection.State == ConnectionState.Open)
-                {
-                    connection.Close();
-                }
-                exec.Dispose();
-                connection.Dispose();
-            }
-        }
-
-        public Boolean ConfereUma(int numBonus, int codigoUma, int codBarra, int qtConf, string dataValidade, int codBox, int codFuncConf)
-        {
-            OracleConnection connection = DataBase.novaConexao();
-            OracleCommand exec = connection.CreateCommand();
-
-            StringBuilder insereConferencia = new StringBuilder();
-            StringBuilder registraBox = new StringBuilder();
-
-            try
-            {
-                insereConferencia.Append("INSERT INTO TAB_ENDERECAMENTO_CONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, CODIGOUMA, QT)");
-                insereConferencia.Append($"                           VALUES ({numBonus}, {codBarra}, SYSDATE, TO_DATE('{dataValidade}', 'DD/MM/YYYY'), {codFuncConf}, {codigoUma}, {qtConf})");
-
-                exec.CommandText = insereConferencia.ToString();
-                OracleDataReader insereConfUma = exec.ExecuteReader();
-
-                registraBox.Append($"UPDATE PCMOVENDPEND SET CODBOX = {codBox}, NUMBOX = {codBox} WHERE NUMBONUS = {numBonus} AND CODIGOUMA = {codigoUma} AND DTESTORNO IS NULL");
-                exec.CommandText = registraBox.ToString();
-                OracleDataReader insereBoxUma = exec.ExecuteReader();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                if (connection.State == ConnectionState.Open)
-                {
-                    connection.Close();
-                    return false;
-
-                    throw new Exception(ex.Message);
-                }
-
-                exec.Dispose();
-                connection.Dispose();
-
-                return false;
-                throw new Exception(ex.Message);
-            }
-            finally
-            {
-                if (connection.State == ConnectionState.Open)
-                {
-                    connection.Close();
-                }
-                exec.Dispose();
-                connection.Dispose();
-            }
-        }
 
         public DataTable BuscaCabBonus(string tipoBonus, int codFilial)
         {
@@ -207,9 +110,10 @@ namespace ProjetoColetorApi.Model
             try
             {
 
-                query.Append("SELECT bo.numbonus, MAX(nf.fornecedor) AS fornecedor, bo.placa");
+                query.Append("SELECT bo.numbonus, MAX(nf.fornecedor) AS fornecedor, bo.placa, bo.codfuncrm as codconf, func.nome as nomeconferente");
                 query.Append("  FROM pcbonusc bo LEFT OUTER JOIN pcnfent nf ON (bo.numbonus = nf.numbonus AND bo.codfilial = nf.codfilial)");
                 query.Append("                   LEFT OUTER JOIN pcwms w ON (bo.numbonus = w.numbonus AND bo.codfilial = w.codfilial)");
+                query.Append("                   LEFT OUTER JOIN pcempr func ON (bo.codfuncrm = func.matricula)");
                 query.Append($"WHERE bo.codfilial = {codFilial}");
                 if (tipoBonus == "E")
                 {
@@ -223,7 +127,7 @@ namespace ProjetoColetorApi.Model
                 query.Append("   AND w.dtcancel IS NULL");
                 query.Append("   AND bo.dtfechamento IS NULL");
                 query.Append("   AND bo.codfunccancel IS NULL");
-                query.Append(" GROUP BY bo.numbonus, bo.placa");
+                query.Append(" GROUP BY bo.numbonus, bo.placa, bo.codfuncrm, func.nome");
                 query.Append(" ORDER BY bo.numbonus");
 
                 exec.CommandText = query.ToString();
@@ -530,7 +434,8 @@ namespace ProjetoColetorApi.Model
             try
             {
                 query.Append("SELECT BI.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM AS DESCRICAO, P.QTUNIT, P.QTUNITCX, PF.LASTROPAL AS LASTRO, PF.ALTURAPAL AS CAMADA, ");
-                query.Append("       PF.PRAZOVAL AS DIASVALIDADE, PF.PERCTOLERANCIAVAL AS SHELFLIFE, BI.QTNF, P.CODAUXILIAR, PF.QTTOTPAL AS NORMA, ROUND(MOD(BI.QTNF / PF.QTTOTPAL, 1), 6) AS RESTO");
+                query.Append("       PF.PRAZOVAL AS DIASVALIDADE, PF.PERCTOLERANCIAVAL AS SHELFLIFE, BI.QTNF, P.CODAUXILIAR, PF.QTTOTPAL AS NORMA, ROUND(MOD(BI.QTNF / P.QTUNITCX / PF.QTTOTPAL, 1), 6) AS RESTO, ");
+                query.Append("       ROUND(PF.QTTOTPAL * ROUND(MOD(BI.QTNF / P.QTUNITCX / PF.QTTOTPAL, 1), 6), 2) * P.QTUNITCX AS QTRESTO, CASE WHEN BC.DTFECHAMENTO IS NOT NULL THEN 'S' ELSE 'N' END FECHADO");
                 query.Append("  FROM PCBONUSI BI INNER JOIN PCPRODUT P ON (BI.CODPROD = P.CODPROD)");
                 query.Append("                   INNER JOIN PCBONUSC BC ON (BI.NUMBONUS = BC.NUMBONUS)");
                 query.Append("                   INNER JOIN PCPRODFILIAL PF ON (P.CODPROD = PF.CODPROD AND BC.CODFILIAL = PF.CODFILIAL)");
@@ -570,6 +475,115 @@ namespace ProjetoColetorApi.Model
         }
     }
 
+    public class ConferenciaUma
+    {
+        public int Numbonus { get; set; }
+        public int Codigouma { get; set; }
+        public int Codprod { get; set; }
+        public int Qtconf { get; set; }
+        public string Datavalidade { get; set; }
+        public int Numbox { get; set; }
+        public int Conferente { get; set; }
+
+        public DataTable BuscaUma(Int64 codigoUma)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            DataTable cabUma = new DataTable();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append("SELECT MOV.NUMBONUS, MOV.CODIGOUMA, MOV.CODPROD, P.CODAUXILIAR AS EAN, CODAUXILIAR2 AS DUN, MOV.QT, MOV.DTVALIDADE, CONF.DATACONF, CONF.CODFUNCCONF, P.QTUNITCX");
+                query.Append("  FROM PCMOVENDPEND MOV INNER JOIN PCPRODUT P ON (MOV.CODPROD = P.CODPROD) ");
+                query.Append("                        LEFT OUTER JOIN TAB_ENDERECAMENTO_CONF CONF ON(MOV.NUMBONUS = CONF.NUMBONUS AND MOV.CODIGOUMA = CONF.CODIGOUMA)");
+                query.Append($"WHERE MOV.CODIGOUMA = {codigoUma}");
+                query.Append("   AND MOV.DTESTORNO IS NULL");
+
+                exec.CommandText = query.ToString();
+                OracleDataAdapter oda = new OracleDataAdapter(exec);
+                oda.SelectCommand = exec;
+                oda.Fill(cabUma);
+
+                return cabUma;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public Boolean ConfereUma(ConferenciaUma dados)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder insereConferencia = new StringBuilder();
+            StringBuilder registraBox = new StringBuilder();
+
+            try
+            {
+                insereConferencia.Append("INSERT INTO TAB_ENDERECAMENTO_CONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, CODIGOUMA, QT)");
+                insereConferencia.Append($"                           VALUES ({dados.Numbonus}, {dados.Codprod}, SYSDATE, TO_DATE('{dados.Datavalidade}', 'DD/MM/YYYY'), {dados.Conferente}, {dados.Codigouma}, {dados.Qtconf})");
+
+                exec.CommandText = insereConferencia.ToString();
+                OracleDataReader insereConfUma = exec.ExecuteReader();
+
+                registraBox.Append($"UPDATE PCMOVENDPEND SET CODBOX = {dados.Numbox}, NUMBOX = {dados.Numbox} WHERE NUMBONUS = {dados.Numbonus} AND CODIGOUMA = {dados.Codigouma} AND DTESTORNO IS NULL");
+                exec.CommandText = registraBox.ToString();
+                OracleDataReader insereBoxUma = exec.ExecuteReader();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return false;
+
+                    throw new Exception(ex.Message);
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return false;
+                throw new Exception(ex.Message);
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+    }
     public class ConferenciaBonus
     {
         public int Numbonus { get; set; }
@@ -818,36 +832,27 @@ namespace ProjetoColetorApi.Model
 
         public string EnderecaBonus(int numBonus, int codFilial, int codFunc)
         {
-            string retorno;
             OracleConnection connection = DataBase.novaConexao();
-            OracleCommand exec = new OracleCommand("FNC_ENDERECAMENTO_PROD", connection);
+            OracleCommand exec = new OracleCommand("stp_enderecamento_prod", connection);
 
             try
             {
                 exec.CommandType = CommandType.StoredProcedure;
 
-                OracleParameter resposta = new OracleParameter("@Resposta", OracleDbType.Varchar2, 100);
-
-                resposta.Direction = ParameterDirection.ReturnValue;
-
-                exec.Parameters.Add(resposta);
-
                 exec.Parameters.Add("pFILIAL", OracleDbType.Int32).Value = codFilial;
                 exec.Parameters.Add("pNUMBONUS", OracleDbType.Int32).Value = numBonus;
                 exec.Parameters.Add("pCODFUNCCONFERENTE", OracleDbType.Int32).Value = codFunc;
+               
+                OracleParameter resposta = new OracleParameter("@Resposta", OracleDbType.Varchar2, 1000);
+
+                resposta.Direction = ParameterDirection.Output;
+
+                exec.Parameters.Add(resposta);
 
                 exec.ExecuteNonQuery();
 
-                if (resposta.Value != DBNull.Value)
-                {
-                    
-                    retorno = resposta.Value.ToString();
-                    return retorno;
-                } 
-                else
-                {
-                    return "Erro no endereçamento. Tente novamente mais tarde.";
-                }
+                return resposta.Value.ToString();
+
             }
             catch (Exception ex)
             {

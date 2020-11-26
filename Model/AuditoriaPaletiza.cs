@@ -150,16 +150,18 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("SELECT letra, palete FROM (");
-                query.Append("SELECT DISTINCT vol.letra, os.numpalete as palete, ped.numordemcarga");
-                query.Append("  FROM pcvolumeos vol INNER JOIN (SELECT numos, numpalete, numcar, codoper, dtestorno, codfilial, numped");
-                query.Append("                                  FROM  pcmovendpend");
-                query.Append($"                                 WHERE numcar = {numCar}) os ON (vol.numos = os.numos)");
-                query.Append("                      INNER JOIN pcpedc ped ON (os.numcar = ped.numcar AND os.numped = ped.numped) ");
+                query.Append("SELECT letra, palete, totpesopalete FROM (");
+                query.Append("SELECT DISTINCT vol.letra, os.numpalete as palete, ped.numordemcarga, ROUND(os.totpesopalete, 2) as totpesopalete");
+                query.Append("  FROM pcvolumeos vol INNER JOIN (SELECT mov.numcar, mov.numpalete, mov.numtranswms, mov.numos, sum((mov.qt * prod.pesoliq)) over (partition by numpalete) as totpesopalete");
+                query.Append("                                    FROM pcmovendpend mov inner join pcwms wms on (mov.numtranswms = wms.numtranswms and wms.codprod = mov.codprod)");
+                query.Append("                                                          inner join pcprodut prod on (mov.codprod = prod.codprod)");
+                query.Append($"                                  WHERE mov.numcar = {numCar}");
+                query.Append("                                     AND mov.codoper = 'S'");
+                query.Append("                                     AND mov.dtestorno IS NULL");
+                query.Append("                                     AND wms.dtcancel IS NULL) os ON (vol.numos = os.numos)");
+                query.Append("                      INNER JOIN pcpedc ped ON (os.numcar = ped.numcar AND os.numtranswms = ped.numtranswms) ");
                 query.Append($"WHERE ped.numcar = {numCar}");
-                query.Append($"   AND vol.datapalete IS NULL AND (vol.codfuncmontapalete IS NULL OR vol.codfuncmontapalete = {codFunc})");
-                query.Append("   AND os.codoper = 'S'");
-                query.Append("   AND os.dtestorno IS NULL");
+                query.Append($"  AND vol.datapalete IS NULL AND (vol.codfuncmontapalete IS NULL OR vol.codfuncmontapalete = {codFunc})");
                 query.Append(" ORDER BY os.numpalete, ped.numordemcarga)");
                 query.Append(" WHERE rownum = 1");
 
@@ -205,43 +207,111 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("select os.numos, prod.codauxiliar2 as dun, qtconferida, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia as divergencia, pertenceCarga, reconferido, ");
-                query.Append("       (SELECT COUNT(*) AS os FROM pcmovendpend");
-                query.Append($"        WHERE numos = {dados.NumOs} AND dtfimconferencia IS NULL) AS osaberta,");
-                query.Append("       (select count(os.numvol) as divergencia");
-                query.Append("          from (select distinct numos from pcmovendpend where numcar = os.numcar and dtestorno is null) mov inner join pcvolumeos os on (mov.numos = os.numos)");
-                query.Append("         where os.dtconf2 is null) as qtospendente");
-                query.Append("  from (select mov.numos, mov.codprod, mov.qtconferida, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
-                query.Append("               nvl(mov.numbox, 0) as numbox, nvl(vol.numvol, 1) as numvol, mov.tipoos, ");
-                query.Append($"              case when mov.numcar = {dados.NumCar} then 'S' else 'N'end as pertenceCarga, ");
-                query.Append("               case when vol.dtconf2 is not null then 'S' else 'N' end as reconferido, ");
-                query.Append("               vol.dtconf2 as dtconf, ");
-                query.Append("               vol.codfuncconf2 as codfuncconf, ");
-                query.Append("               nvl(pend.pendencia, 0) as pendencia, mov.codprod as prod_os, vol.codprod as prod_vol");
-                query.Append("          from pcmovendpend mov left outer join (select vos.numos, vos.numvol, vos.dtconf2, vos.codfuncconf2, vosi.codprod");
-                query.Append("                                                   from pcvolumeos vos, pcvolumeosi vosi");
-                query.Append("                                                  where vos.numos = vosi.numos(+)");
-                query.Append("                                                    and vos.numvol = vosi.numvol(+)");
-                query.Append($"                                                   and vos.numos = {dados.NumOs}");
-                query.Append($"                                                   and vos.numvol = {dados.NumVol}) vol on (mov.numos = vol.numos)");
-                query.Append("                                left outer join (select count(distinct numvol) pendencia, numos");
-                query.Append("                                                   from pcvolumeos");
-                query.Append($"                                                 where numos = {dados.NumOs}");
-                query.Append("                                                    and dtconf2 is null");
-                query.Append("                                                  group by numos");
-                query.Append("                                                ) pend on (mov.numos = pend.numos)");
-                query.Append($"        where mov.numos = {dados.NumOs}");
-                query.Append("           and mov.dtestorno is null");
-                query.Append("         order by case when mov.codprod = vol.codprod then 0 else 1 end");
-                query.Append("       ) os inner join pcprodut prod on (os.codprod = prod.codprod)");
-                query.Append(" where os.prod_os = nvl(os.prod_vol, os.prod_os)");
+                if (dados != null)
+                {
+                    query.Append("select os.numos, prod.codauxiliar2 as dun, qtconferida, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia as divergencia, pertenceCarga, reconferido, ");
+                    query.Append("       (SELECT COUNT(*) AS os FROM pcmovendpend");
+                    query.Append($"        WHERE numos = {dados.NumOs} AND (posicao = 'P' AND dtfimconferencia IS NULL)) AS osaberta,");
+                    query.Append("       (select count(os.numvol) as divergencia");
+                    query.Append("          from (select distinct numos from pcmovendpend where numcar = os.numcar and dtestorno is null) mov inner join pcvolumeos os on (mov.numos = os.numos)");
+                    query.Append("         where os.dtconf2 is null) as qtospendente");
+                    query.Append("  from (select mov.numos, mov.codprod, mov.qtconferida, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
+                    query.Append("               nvl(mov.numbox, 0) as numbox, nvl(vol.numvol, 1) as numvol, mov.tipoos, ");
+                    query.Append($"              case when mov.numcar = {dados.NumCar} then 'S' else 'N'end as pertenceCarga, ");
+                    query.Append("               case when vol.dtconf2 is not null then 'S' else 'N' end as reconferido, ");
+                    query.Append("               vol.dtconf2 as dtconf, ");
+                    query.Append("               vol.codfuncconf2 as codfuncconf, ");
+                    query.Append("               nvl(pend.pendencia, 0) as pendencia, mov.codprod as prod_os, vol.codprod as prod_vol");
+                    query.Append("          from pcmovendpend mov left outer join (select vos.numos, vos.numvol, vos.dtconf2, vos.codfuncconf2, vosi.codprod");
+                    query.Append("                                                   from pcvolumeos vos, pcvolumeosi vosi");
+                    query.Append("                                                  where vos.numos = vosi.numos(+)");
+                    query.Append("                                                    and vos.numvol = vosi.numvol(+)");
+                    query.Append($"                                                   and vos.numos = {dados.NumOs}");
+                    query.Append($"                                                   and vos.numvol = {dados.NumVol}) vol on (mov.numos = vol.numos)");
+                    query.Append("                                left outer join (select count(distinct numvol) pendencia, numos");
+                    query.Append("                                                   from pcvolumeos");
+                    query.Append($"                                                 where numos = {dados.NumOs}");
+                    query.Append("                                                    and dtconf2 is null");
+                    query.Append("                                                  group by numos");
+                    query.Append("                                                ) pend on (mov.numos = pend.numos)");
+                    query.Append($"        where mov.numos = {dados.NumOs}");
+                    query.Append("           and mov.dtestorno is null");
+                    query.Append("         order by case when mov.codprod = vol.codprod then 0 else 1 end");
+                    query.Append("       ) os inner join pcprodut prod on (os.codprod = prod.codprod)");
+                    query.Append(" where os.prod_os = nvl(os.prod_vol, os.prod_os)");
+                    query.Append($"  and (case when os.tipoos <> 17 then os.numvol else 1 end = case when os.tipoos <> 17 then {dados.NumVol} else 1 end)");
+
+                    exec.CommandText = query.ToString();
+                    OracleDataAdapter oda = new OracleDataAdapter(exec);
+                    oda.SelectCommand = exec;
+                    oda.Fill(osCabecalho);
+
+                    return osCabecalho;
+                }
+                    
+                return osCabecalho;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    throw ex;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw ex;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+        
+        public Boolean ConsultaCorte(int numOs)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder query = new StringBuilder();
+
+            Boolean encontrouCorte;
+
+            try
+            {
+                query.Append($"select count(*) from pcwmscorte where numos = {numOs}");
+
 
                 exec.CommandText = query.ToString();
-                OracleDataAdapter oda = new OracleDataAdapter(exec);
-                oda.SelectCommand = exec;
-                oda.Fill(osCabecalho);
+                OracleDataReader reader = exec.ExecuteReader();
 
-                return osCabecalho;
+                if (reader.Read())
+                {
+                    int qtd_corte = reader.GetInt32(0);
+
+                    if (qtd_corte == 0)
+                    {
+                        encontrouCorte = false;
+                        return encontrouCorte;
+                    }
+                    else
+                    {
+                        encontrouCorte = true;
+                        return encontrouCorte;
+                    }
+                }
+                else
+                {
+                    encontrouCorte = true;
+                    return encontrouCorte;
+                }
             }
             catch (Exception ex)
             {
@@ -318,6 +388,7 @@ namespace ProjetoColetorApi.Model
                 query.Append("         order by case when mov.codprod = vol.codprod then 0 else 1 end");
                 query.Append("       ) os");
                 query.Append(" where os.prod_os = nvl(os.prod_vol, os.prod_os)");
+                query.Append($"  and (case when os.tipoos <> 17 then os.numvol else 1 end = case when os.tipoos <> 17 then {dados.NumVol} else 1 end)");
 
                 exec.CommandText = query.ToString();
                 OracleDataAdapter oda = new OracleDataAdapter(exec);
@@ -384,6 +455,14 @@ namespace ProjetoColetorApi.Model
                 } 
                 else
                 {
+                    Boolean cortes = ConsultaCorte(dados.NumOs);
+
+                    if (cortes)
+                    {
+                        resposta = "O.S: " + dados.NumOs + " possui corte. Favor verificar.";
+                        return resposta;
+                    }
+
                     return resposta;
                 }
             }
@@ -553,7 +632,7 @@ namespace ProjetoColetorApi.Model
             try
             {
                 query.Append("select tab_os.letra, tab_os.numpalete, tab_os.numos, tab_os.numvol, tab.codprod, tab.descricao, en.rua, en.predio, en.nivel, en.apto, tipo.descricao as tipoOs, func.nome as separador");
-                query.Append("  from (select mov.numped, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("  from (select mov.numtranswms, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
                 query.Append("          from pcmovendpend mov inner join pcvolumeos os on (mov.numos = os.numos)");
                 query.Append("                                inner join pcvolumeosi osi on (os.numos = osi.numos and os.numvol = osi.numvol and mov.codprod = osi.codprod)");
                 query.Append($"        where mov.numos = {numOs}");
@@ -569,7 +648,7 @@ namespace ProjetoColetorApi.Model
 
                 query.Append("        union ");
 
-                query.Append("select mov.numped, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("select mov.numtranswms, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
                 query.Append("          from pcmovendpend mov inner join pcvolumeos os on(mov.numos = os.numos)");
                 query.Append($"       where mov.numos = {numOs}");
                 query.Append("          and mov.tipoos = 13");
@@ -584,16 +663,23 @@ namespace ProjetoColetorApi.Model
 
                 query.Append("        union ");
 
-                query.Append("        select mov.numped, null as letra, mov.codfilial, mov.numos, 1 as numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
-                query.Append("          from pcmovendpend mov");
+                query.Append("        select mov.numtranswms, os.letra, mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("          from pcmovendpend mov inner join pcvolumeos os on(mov.numos = os.numos)");
                 query.Append($"         where mov.numos = {numOs}");
                 query.Append("            and mov.tipoos = 17");
-                query.Append("            and nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)");
+                if (tipoConferencia == "P")
+                {
+                    query.Append("   and os.datapalete IS NULL");
+                }
+                else
+                {
+                    query.Append("   and os.dtconf2 IS NULL");
+                }
                 query.Append("       ) tab_os inner join (select sum(nvl(mov.qtconferida, 0)) as qtconferida, prod.codprod, prod.descricao");
                 query.Append("                              from pcprodut prod left outer join pcmovendpend mov on(prod.codprod = mov.codprod)");
                 query.Append($"                            where mov.numos = {numOs}");
                 query.Append("                             group by prod.codprod, prod.descricao) tab on (tab_os.codprod = tab.codprod)");
-                query.Append("                INNER JOIN PCPEDC PED ON (tab_os.NUMPED = PED.NUMPED AND tab_os.CODFILIAL = PED.CODFILIAL)");
+                query.Append("                INNER JOIN (select distinct numtranswms, codfilial, numordemcarga from PCPEDC) PED ON (tab_os.numtranswms = PED.numtranswms AND tab_os.CODFILIAL = PED.CODFILIAL)");
                 query.Append("                inner join pcendereco en on (tab_os.codendereco = en.codendereco and tab_os.codfilial = en.codfilial)");
                 query.Append("                inner join pctipoos tipo on (tab_os.tipoos = tipo.codigo)");
                 query.Append("                left outer join pcempr func on (func.matricula = tab_os.codfuncos)");
@@ -642,8 +728,9 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("SELECT TAB.LETRA, TAB.NUMOS, TAB.NUMVOL, PROD.CODPROD, PROD.DESCRICAO, EN.RUA, EN.PREDIO, EN.NIVEL, EN.APTO, T.DESCRICAO AS TIPOOS, P.NOME AS SEPARADOR, NVL(TAB.NUMPALETE, 0) AS NUMPALETE ");
-                query.Append("  FROM (SELECT MOV.NUMPED, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("SELECT TAB.LETRA, TAB.CODBOX, TAB.NUMOS, TAB.NUMVOL, PROD.CODPROD, PROD.DESCRICAO, EN.RUA, EN.PREDIO, EN.NIVEL, EN.APTO, T.DESCRICAO AS TIPOOS, P.NOME AS SEPARADOR, NVL(TAB.NUMPALETE, 0) AS NUMPALETE, ");
+                query.Append($"      CAR.DESTINO AS ROTA, CAR.TOTPESO AS PESOTOTAL");                
+                query.Append("  FROM (SELECT MOV.NUMTRANSWMS, MOV.NUMCAR, NVL(MOV.NUMBOX, MOV.CODBOX) AS CODBOX, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
                 query.Append("          FROM PCMOVENDPEND MOV INNER JOIN PCVOLUMEOS OS ON (MOV.NUMOS = OS.NUMOS)");
                 query.Append("                                INNER JOIN PCVOLUMEOSI OSI ON (OS.NUMOS = OSI.NUMOS AND OS.NUMVOL = OSI.NUMVOL AND MOV.CODPROD = OSI.CODPROD)");
                 query.Append($"        WHERE MOV.NUMCAR = {numCar}");
@@ -661,7 +748,7 @@ namespace ProjetoColetorApi.Model
 
                 query.Append("        UNION ");
 
-                query.Append("        SELECT MOV.NUMPED, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("        SELECT MOV.NUMTRANSWMS, MOV.NUMCAR, NVL(MOV.NUMBOX, MOV.CODBOX) AS CODBOX, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
                 query.Append("          FROM PCMOVENDPEND MOV INNER JOIN PCVOLUMEOS OS ON (OS.NUMOS = MOV.NUMOS)");
                 query.Append($"        WHERE MOV.NUMCAR = {numCar}");
                 query.Append("           AND MOV.TIPOOS = '13'");
@@ -678,15 +765,15 @@ namespace ProjetoColetorApi.Model
 
                 query.Append("        UNION ");
 
-                query.Append("        SELECT MOV.NUMPED, NULL AS LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, 1 AS NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("        SELECT MOV.NUMTRANSWMS, MOV.NUMCAR, NVL(MOV.NUMBOX, MOV.CODBOX) AS CODBOX, NULL AS LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, 1 AS NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
                 query.Append("          FROM PCMOVENDPEND MOV");
                 query.Append($"        WHERE MOV.NUMCAR = {numCar}");
                 query.Append("           AND MOV.DTFIMCONFERENCIA IS NULL");
                 query.Append("           AND MOV.TIPOOS = 17");
                 query.Append("           AND MOV.DTESTORNO IS NULL");
                 query.Append("           AND MOV.DATA > SYSDATE - 30) TAB INNER JOIN PCTIPOOS T ON (T.CODIGO = TAB.TIPOOS)");
-                // query.Append("                                            INNER JOIN PCPEDC PED ON (TAB.NUMTRANSWMS = PED.NUMTRANSWMS AND TAB.CODFILIAL = PED.CODFILIAL)"); NOVO PROCESSO SEM PEDIDO NO WMS
-                query.Append("                                            INNER JOIN PCPEDC PED ON (TAB.NUMPED = PED.NUMPED AND TAB.CODFILIAL = PED.CODFILIAL)"); 
+                query.Append($"                                           INNER JOIN (SELECT DISTINCT CODFILIAL, NUMORDEMCARGA, NUMTRANSWMS FROM PCPEDC WHERE NUMCAR = {numCar}) PED ON (TAB.NUMTRANSWMS = PED.NUMTRANSWMS AND TAB.CODFILIAL = PED.CODFILIAL)");
+                query.Append("                                            INNER JOIN PCCARREG CAR ON (TAB.NUMCAR = CAR.NUMCAR)");
                 query.Append("                                            INNER JOIN PCENDERECO EN ON (TAB.CODENDERECO = EN.CODENDERECO AND TAB.CODFILIAL = EN.CODFILIAL)");
                 query.Append("                                            INNER JOIN PCPRODUT PROD ON (PROD.CODPROD = TAB.CODPROD)");
                 query.Append("                                            LEFT OUTER JOIN PCEMPR P ON (P.MATRICULA = TAB.CODFUNCOS)");

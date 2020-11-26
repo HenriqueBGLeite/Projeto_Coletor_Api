@@ -14,6 +14,7 @@ namespace ProjetoColetorApi.Model
     public class ConferenciaSaida
     {
         public int Numos { get; set; }
+        public int Tipoos { get; set; }
         public int Numvol { get; set; }
         public int CodFuncConf { get; set; }
         public int? Codprod { get; set; }
@@ -126,57 +127,18 @@ namespace ProjetoColetorApi.Model
 
             try
             {
-                query.Append("select os.numos, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia,");
-                query.Append("       (select count (numos) as tot_pend from (select distinct numos");
-                query.Append("                                                 from pcmovendpend");
-                query.Append("                                                where numcar = os.numcar");
-                query.Append("                                                  and nvl(qt, 0) <> nvl(qtconferida, 0)");
-                query.Append("                                                  and dtfimconferencia is null");
-                query.Append("                                                  and dtestorno is null");
-                query.Append("                                                  and tipoos <> 13");
-
-                query.Append("                                               union");
-
-                query.Append("                                               select distinct mov.numos");
-                query.Append("                                                 from pcmovendpend mov inner join pcvolumeos os on (os.numos = mov.numos)");
-                query.Append("                                                where mov.numcar = os.numcar");
-                query.Append("                                                  and mov.tipoos = '13'");
-                query.Append("                                                  and mov.dtestorno is null");
-                query.Append("                                                  and ((os.dtconf is null and os.codfuncconf is null) or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)))");
-                query.Append("                                                  and os.datavolume = 'N')");
-                query.Append("       ) as qtospendente");
+                query.Append("select os.numos, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf");                
                 query.Append("  from (select mov.numos, nvl(mov.numpalete, 0) as numpalete, mov.numped, nvl(mov.numcar, 0) as numcar, ");
                 query.Append("               nvl(mov.numbox, 0) as numbox, nvl(vol.numvol, 1) as numvol, mov.tipoos, ");
                 query.Append("               case when mov.tipoos <> 13 then  nvl(vol.dtconf, mov.dtfimconferencia) else vol.dtconf end dtconf, ");
                 query.Append("               case when mov.tipoos <> 13 then nvl(vol.codfuncconf, mov.codfunccoferente) else vol.codfuncconf end codfuncconf, ");
-                query.Append("               nvl(pend.pendencia, 0) as pendencia, mov.codprod as prod_os, vol.codprod as prod_vol");
+                query.Append("               mov.codprod as prod_os, vol.codprod as prod_vol");
                 query.Append("          from pcmovendpend mov left outer join (select vos.numos, vos.numvol, vos.dtconf, vos.codfuncconf, vosi.codprod");
                 query.Append("                                                  from pcvolumeos vos, pcvolumeosi vosi");
                 query.Append("                                                 where vos.numos = vosi.numos(+)");
                 query.Append("                                                   and vos.numvol = vosi.numvol(+)");
                 query.Append($"                                                  and vos.numos = {numOs}");
                 query.Append($"                                                  and vos.numvol = {numVol}) vol on (mov.numos = vol.numos)");
-                query.Append("                                left outer join (select pendencia, numos ");
-                query.Append("                                                  from (select count(distinct codprod) pendencia, numos");
-                query.Append("                                                          from pcmovendpend");
-                query.Append($"                                                        where numos = {numOs}");
-                query.Append("                                                           and nvl(qt, 0) <> nvl(qtconferida, 0)");
-                query.Append("                                                           and dtfimconferencia is null");
-                query.Append("                                                           and dtestorno is null");
-                query.Append("                                                           and tipoos<> 13");
-                query.Append("                                                         group by numos");
-
-                query.Append("                                                        union");
-
-                query.Append("                                                        select count(distinct mov.codprod) pendencia, mov.numos");
-                query.Append("                                                          from pcmovendpend mov inner join pcvolumeos os on(os.numos = mov.numos)");
-                query.Append($"                                                        where mov.numos = {numOs}");
-                query.Append("                                                           and ((os.dtconf is null and os.codfuncconf is null) or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)))");
-                query.Append("                                                           and mov.dtestorno is null");
-                query.Append("                                                           and os.datavolume = 'N'");
-                query.Append("                                                           and mov.tipoos = 13");
-                query.Append("                                                         group by mov.numos)");
-                query.Append("                                                ) pend on (mov.numos = pend.numos) ");
                 query.Append($"        where mov.numos = {numOs}");
                 query.Append("           and mov.dtestorno is null");
                 query.Append("         order by case when mov.codprod = vol.codprod then 0 else 1 end");
@@ -381,8 +343,11 @@ namespace ProjetoColetorApi.Model
                 exec.CommandText = dadosConf.ToString();
                 OracleDataReader confDados = exec.ExecuteReader();
 
+                int qt_os = 0;
+
                 while (confDados.Read())
                 {
+                    qt_os = confDados.GetInt32(2);
                     int cont = 0;
                     Int64 numPed = confDados.GetInt64(0);
                     int qtConferida = confDados.GetInt32(1);
@@ -450,21 +415,40 @@ namespace ProjetoColetorApi.Model
                     }
                 }
 
-                updateVolumeConf.Append($"update pcvolumeos set datavolume = 'S', codfuncconf = {dados.CodFuncConf}, dtconf = sysdate where numvol = {dados.Numvol} and numos = {dados.Numos}");
+                if (dados.Tipoos == 17)
+                {
+                    if (qt_os == dados.Qtconf)
+                    {
+                        updateVolumeConf.Append($"update pcvolumeos set codrotina = 9844, datavolume = 'S', codfuncconf = {dados.CodFuncConf}, dtconf = sysdate where numvol = {dados.Numvol} and numos = {dados.Numos}");
 
-                exec.CommandText = updateVolumeConf.ToString();
-                OracleDataReader execUpdateVolumeConf = exec.ExecuteReader();
+                        exec.CommandText = updateVolumeConf.ToString();
+                        OracleDataReader execUpdateVolumeConf = exec.ExecuteReader();
 
-                //ALIMENTA O LOG PARA SAIR DO RELATORIO DA 1707
-                updateVolumeConfLog.Append($"update pcvolumeoslog set datavolume = 'S', codfuncconf = {dados.CodFuncConf}, dtconf = sysdate where numvol = {dados.Numvol} and numos = {dados.Numos}");              
+                        //ALIMENTA O LOG PARA SAIR DO RELATORIO DA 1707
+                        updateVolumeConfLog.Append($"update pcvolumeoslog set letra = 'WEB', datavolume = 'S', codfuncconf = {dados.CodFuncConf}, dtconf = sysdate where numvol = {dados.Numvol} and numos = {dados.Numos}");
 
-                exec.CommandText = updateVolumeConfLog.ToString();
-                OracleDataReader execUpdateVolumeConfLog = exec.ExecuteReader();
+                        exec.CommandText = updateVolumeConfLog.ToString();
+                        OracleDataReader execUpdateVolumeConfLog = exec.ExecuteReader();
+                    }
+                } 
+                else 
+                {
+                    updateVolumeConf.Append($"update pcvolumeos set codrotina = 9844, datavolume = 'S', codfuncconf = {dados.CodFuncConf}, dtconf = sysdate where numvol = {dados.Numvol} and numos = {dados.Numos}");
+
+                    exec.CommandText = updateVolumeConf.ToString();
+                    OracleDataReader execUpdateVolumeConf = exec.ExecuteReader();
+
+                    //ALIMENTA O LOG PARA SAIR DO RELATORIO DA 1707
+                    updateVolumeConfLog.Append($"update pcvolumeoslog set letra = 'WEB', datavolume = 'S', codfuncconf = {dados.CodFuncConf}, dtconf = sysdate where numvol = {dados.Numvol} and numos = {dados.Numos}");
+
+                    exec.CommandText = updateVolumeConfLog.ToString();
+                    OracleDataReader execUpdateVolumeConfLog = exec.ExecuteReader();
+                }
 
                 transacao.Commit();
                 connection.Close();
 
-                DataTable resultadoPendencia = buscaQtVolumePendente(dados.Numos, (int) dados.Numbox);
+                DataTable resultadoPendencia = BuscaQtVolumePendente(dados.Numos, (int) dados.Numbox);
 
                 Int32 qtPendencia = Convert.ToInt32(resultadoPendencia.Rows[0]["pendencia"]);
 
@@ -511,7 +495,7 @@ namespace ProjetoColetorApi.Model
             }
         }
 
-        public DataTable buscaQtVolumePendente(int numOs, int numBox)
+        public static DataTable BuscaQtVolumePendente(int numOs, int numBox)
         {
             OracleConnection connection = DataBase.novaConexao();
             OracleCommand exec = connection.CreateCommand();
@@ -635,11 +619,12 @@ namespace ProjetoColetorApi.Model
 
                 query.Append("        union ");
 
-                query.Append("        select mov.numped, null as letra, mov.codfilial, mov.numos, 1 as numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
-                query.Append("          from pcmovendpend mov");
+                query.Append("        select mov.numped, os.letra , mov.codfilial, mov.numos, os.numvol, mov.codprod, mov.numpalete, mov.codendereco, mov.tipoos, mov.codfuncos");
+                query.Append("          from pcmovendpend mov inner join pcvolumeos os on (mov.numos = os.numos)");
                 query.Append($"         where mov.numos = {numOs}");
                 query.Append("            and mov.tipoos = 17");
                 query.Append("            and nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)");
+                query.Append("            and nvl(os.datavolume, 'N') = 'N'");
                 query.Append("       ) tab_os inner join (select sum(nvl(mov.qtconferida, 0)) as qtconferida, prod.codprod, prod.descricao");
                 query.Append("                              from pcprodut prod left outer join pcmovendpend mov on(prod.codprod = mov.codprod)");
                 query.Append($"                            where mov.numos = {numOs}");
@@ -709,14 +694,13 @@ namespace ProjetoColetorApi.Model
                 query.Append($"        WHERE MOV.NUMCAR = {numcar}");
                 query.Append("           AND MOV.TIPOOS = '13'");
                 query.Append("           AND MOV.DTESTORNO IS NULL");
-                query.Append("           AND ((OS.DTCONF IS NULL AND OS.CODFUNCCONF IS NULL) OR (NVL(MOV.QTCONFERIDA, 0) <> NVL(MOV.QT, 0)))");
-                query.Append("           AND OS.DATAVOLUME = 'N'");
+                query.Append("           AND ((OS.DTCONF IS NULL AND OS.CODFUNCCONF IS NULL AND OS.DATAVOLUME = 'N') OR (NVL(MOV.QTCONFERIDA, 0) <> NVL(MOV.QT, 0)))");
                 query.Append("           AND MOV.DATA > SYSDATE - 30");
 
                 query.Append("        UNION ");
 
-                query.Append("        SELECT MOV.NUMPED, NULL AS LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, 1 AS NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
-                query.Append("          FROM PCMOVENDPEND MOV");
+                query.Append("        SELECT MOV.NUMPED, OS.LETRA, MOV.CODFILIAL, MOV.NUMOS, MOV.CODPROD, OS.NUMVOL, NVL(MOV.NUMPALETE, 0) AS NUMPALETE, MOV.TIPOOS, MOV.CODENDERECO, MOV.CODFUNCOS");
+                query.Append("          FROM PCMOVENDPEND MOV INNER JOIN PCVOLUMEOS OS ON (MOV.NUMOS = OS.NUMOS)");
                 query.Append($"        WHERE MOV.NUMCAR = {numcar}");
                 query.Append("           AND MOV.DTFIMCONFERENCIA IS NULL");
                 query.Append("           AND MOV.TIPOOS = 17");
@@ -864,6 +848,96 @@ namespace ProjetoColetorApi.Model
                 connection.Dispose();
 
                 return false;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+    }
+
+    public class BuscaPendenciaDivergencia
+    {
+        public int Pendencia { get; set; }
+        public int Divergencia { get; set; }
+
+        public BuscaPendenciaDivergencia BuscaPendDiverg(int numCar, Int32 numOs)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder queryDivergencia = new StringBuilder();
+            StringBuilder queryPendencia = new StringBuilder();
+
+            try
+            {
+                BuscaPendenciaDivergencia dados = new BuscaPendenciaDivergencia();
+
+                queryDivergencia.Append("select max(pendencia) as pendencia");
+                queryDivergencia.Append("  from (select count(distinct codprod) pendencia");
+                queryDivergencia.Append("          from pcmovendpend");
+                queryDivergencia.Append($"        where numos = {numOs}");
+                queryDivergencia.Append("           and nvl(qt, 0) <> nvl(qtconferida, 0)");
+                queryDivergencia.Append("           and dtfimconferencia is null");
+                queryDivergencia.Append("           and dtestorno is null");
+                queryDivergencia.Append("           and tipoos<> 13");
+
+                queryDivergencia.Append("        union");
+
+                queryDivergencia.Append("        select count(distinct mov.codprod) pendencia");
+                queryDivergencia.Append("          from pcmovendpend mov inner join pcvolumeos os on (os.numos = mov.numos)");
+                queryDivergencia.Append($"        where mov.numos = {numOs}");
+                queryDivergencia.Append("           and ((os.dtconf is null and os.codfuncconf is null) or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0)))");
+                queryDivergencia.Append("           and mov.dtestorno is null");
+                queryDivergencia.Append("           and os.datavolume = 'N'");
+                queryDivergencia.Append("           and mov.tipoos = 13)");
+
+                exec.CommandText = queryDivergencia.ToString();
+                OracleDataReader readerDivergencia = exec.ExecuteReader();
+
+                queryPendencia.Append("select count (distinct numos) as tot_pend ");
+                queryPendencia.Append("  from (select case when mov.tipoos = 13"); 
+                queryPendencia.Append("                     and ((os.dtconf is null and os.codfuncconf is null and os.datavolume = 'N')");
+                queryPendencia.Append("                       or (nvl(mov.qtconferida, 0) <> nvl(mov.qt, 0))) then mov.numos ");
+                queryPendencia.Append("                    when mov.tipoos <> 13 and nvl (mov.qt, 0) <> nvl(mov.qtconferida, 0) and mov.dtfimconferencia is null then mov.numos");
+                queryPendencia.Append("                end numos");
+                queryPendencia.Append("          from pcmovendpend mov left outer join pcvolumeos os on (mov.numos = os.numos)");
+                queryPendencia.Append($"        where mov.numcar = {numCar}");
+                queryPendencia.Append("           and mov.dtestorno is null)");
+
+                exec.CommandText = queryPendencia.ToString();
+                OracleDataReader readerPendencia = exec.ExecuteReader();
+
+                if (readerDivergencia.Read() && readerPendencia.Read())
+                {
+                    int qtDivergencia = readerDivergencia.GetInt32(0);
+                    int qtPendencia = readerPendencia.GetInt32(0);
+
+                    dados.Divergencia = qtDivergencia;
+                    dados.Pendencia = qtPendencia;
+
+                    return dados;
+                }
+
+                return dados;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    throw new Exception(ex.ToString());
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.ToString());
             }
             finally
             {

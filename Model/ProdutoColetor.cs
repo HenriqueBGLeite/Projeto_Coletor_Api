@@ -822,6 +822,70 @@ namespace ProjetoColetorApi.Model
             }
         }
 
+        public Boolean VerificaListagem(int lista)
+        {
+            Boolean aberto;
+
+            OracleConnection connection = DataBase.novaConexao();
+
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append($"SELECT COUNT(*) FROM TAB_LOGISTICA_REPOSICAO WHERE NUMREPOSICAO = {lista} AND (case when dtconflista is not null then 'S' else 'N' end = 'N')");
+
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    int qtd_aberto = reader.GetInt32(0);
+
+                    if (qtd_aberto == 0)
+                    {
+                        aberto = false;
+                        return aberto;
+                    } 
+                    else
+                    {
+                        aberto = true;
+                        return aberto;
+                    }
+                } 
+                else
+                {
+                    aberto = true;
+                    return aberto;
+                }
+            }
+            catch (Exception ex)
+            {
+                aberto = false;
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return aberto;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return aberto;
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
         public Boolean cancelarListagem(int numListagem)
         {
             Boolean cancelado = false;

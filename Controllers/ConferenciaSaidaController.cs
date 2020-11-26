@@ -42,6 +42,20 @@ namespace ProjetoColetorApi.Controllers
             return resposta;
         }
 
+        [Route("{numCar}/{numOs}")]
+        public JsonResult BuscaPendDiverg(int numCar, Int32 numOs)
+        {
+            try
+            {
+                return Json(new BuscaPendenciaDivergencia().BuscaPendDiverg(numCar, numOs));
+            }
+            catch (Exception ex)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                return Json(ex.Message);
+            }
+        }
+
         [Route("{codBarra}/{numOs}/{numVol}/{filial}")]
         public JsonResult ProdutoOsVolume(string codBarra, int numOs, int numVol, int filial)
         {
@@ -100,12 +114,6 @@ namespace ProjetoColetorApi.Controllers
             }
 
             return resposta;
-        }
-
-        [Route("{numOs}/{numBox}")]
-        public JsonResult buscaQtVolumePendente(int numOs, int numBox)
-        {
-            return Json(new ConferenciaSaida().buscaQtVolumePendente(numOs, numBox));
         }
 
         [HttpPut]

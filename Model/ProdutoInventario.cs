@@ -136,14 +136,7 @@ namespace ProjetoColetorApi.Model
                 exec.Parameters.Add("P_DTVALIDADE", OracleDbType.Varchar2).Value = dtvalidade;
                 exec.Parameters.Add("P_MATDIG", OracleDbType.Int32).Value = prod.MatDig;
                 exec.Parameters.Add("P_STATUS", OracleDbType.Varchar2).Value = prod.Status;
-                if (prod.Alteravalidade)
-                {
-                    exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = true;
-                }
-                else
-                {
-                    exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = false;
-                }
+                exec.Parameters.Add("P_ALTERAVALIDADE", OracleDbType.Boolean).Value = prod.Alteravalidade;
 
                 exec.ExecuteNonQuery();
 
@@ -241,7 +234,7 @@ namespace ProjetoColetorApi.Model
 
                             query = new StringBuilder();
 
-                            query.Append($"UPDATE EPCTI.PCINVENTENDERECOI SET MATDIG = {codUsuario} WHERE INVENTOS = {proxOs} AND CONTAGEM = {minimaContagem} AND DTCONTINI IS NULL");
+                            query.Append($"UPDATE EPCTI.PCINVENTENDERECOI SET MATDIG = {codUsuario}, MATCONT = {codUsuario} WHERE INVENTOS = {proxOs} AND CONTAGEM = {minimaContagem} AND DTCONTINI IS NULL");
 
                             exec.CommandText = query.ToString();
                             reader = exec.ExecuteReader();
@@ -259,7 +252,7 @@ namespace ProjetoColetorApi.Model
                         query.Append($"               en.deposito, en.rua, en.predio, en.nivel, en.apto, prod.qtunitcx");
                         query.Append($"          from pcinventenderecoi inv inner join pcendereco en on (inv.codendereco = en.codendereco)");
                         query.Append($"                                     left outer join pcprodut prod on (inv.codprod = prod.codprod)");
-                        query.Append($"         where inv.inventos = {proxOs} and nvl(inv.status, 'E') in ('E', 'D') and nvl(inv.qt, 0) = 0 and inv.dtcontfim is null");
+                        query.Append($"         where inv.inventos = {proxOs} and inv.contagem = {minimaContagem} and nvl(inv.status, 'E') in ('E', 'D') and nvl(inv.qt, 0) = 0 and inv.dtcontfim is null");
                         query.Append($"         order by en.deposito, en.rua, case when mod(en.rua, 2) = 0 then en.predio end asc, case when mod(en.rua, 2) = 1 then en.predio end asc, ");
                         query.Append($"                  en.nivel, en.apto, inv.codprod, inv.codendereco, inv.contagem");
                         query.Append($"        )");

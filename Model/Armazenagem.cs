@@ -31,7 +31,7 @@ namespace ProjetoColetorApi.Model
                 query.Append("                                 and mov.codrotina = 9844");
                 query.Append("                                 and en.tipoender = 'AE'");
                 query.Append("                                 and mov.posicao = 'P'");
-                query.Append("                                 and mov.codfunccoferente is null");
+                query.Append($"                                and ((mov.codfunccoferente is null) or (mov.codfunccoferente = {codfunc}))");
                 query.Append("                                 and nvl(mov.codenderecoorig, 0) = 0");
                 query.Append("                                 and mov.codoper like 'E%'");
                 query.Append("                               order by en.rua, CASE WHEN MOD(en.rua, 2) = 1 THEN en.predio END ASC, CASE WHEN MOD(en.rua, 2) = 0 THEN en.predio END DESC, en.nivel, en.apto)");
