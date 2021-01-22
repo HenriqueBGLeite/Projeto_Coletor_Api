@@ -106,5 +106,17 @@ namespace ProjetoColetorApi.Controllers
         {
             return new ConferenciaBonus().EnderecaBonus(numBonus, codFilial, codFunc);
         }
+
+        [Route("{numBonus}")]
+        public List<int> BuscaDadosImpressao(int numBonus)
+        {
+            return new ParametrosEndereca().BuscaDadosImpressao(numBonus);
+        }
+
+        [HttpPut]
+        public string ChamaImpressao([FromBody] ParametrosEndereca parametros)
+        {
+            return new ParametrosEndereca().ChamaImpressao(parametros);
+        }
     }
 }

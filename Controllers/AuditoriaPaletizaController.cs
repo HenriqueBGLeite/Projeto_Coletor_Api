@@ -86,5 +86,12 @@ namespace ProjetoColetorApi.Controllers
         {
             return Json(new AuditoriaPaletiza().AtualizaDivergPend(numCar, numOs, tipoConferencia));
         }
+
+        [HttpPut]
+        [Route("{numCar}")]
+        public Boolean ReabreAuditoriaCarga(int numCar)
+        {
+            return new AuditoriaPaletiza().ReabreAuditoriaCarga(numCar);
+        }
     }
 }

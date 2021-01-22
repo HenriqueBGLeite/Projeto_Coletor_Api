@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using Oracle.ManagedDataAccess.Client;
 using System.Data;
 using System.Text;
+using System.IO;
+using System.Drawing.Printing;
+using PdfiumViewer;
 
 namespace ProjetoColetorApi.Model
 {
@@ -96,7 +99,6 @@ namespace ProjetoColetorApi.Model
                 connection.Dispose();
             }
         }
-
 
         public DataTable BuscaCabBonus(string tipoBonus, int codFilial)
         {
@@ -435,7 +437,7 @@ namespace ProjetoColetorApi.Model
             {
                 query.Append("SELECT BI.CODPROD, P.DESCRICAO || ' - ' || P.EMBALAGEM AS DESCRICAO, P.QTUNIT, P.QTUNITCX, PF.LASTROPAL AS LASTRO, PF.ALTURAPAL AS CAMADA, ");
                 query.Append("       PF.PRAZOVAL AS DIASVALIDADE, PF.PERCTOLERANCIAVAL AS SHELFLIFE, BI.QTNF, P.CODAUXILIAR, PF.QTTOTPAL AS NORMA, ROUND(MOD(BI.QTNF / P.QTUNITCX / PF.QTTOTPAL, 1), 6) AS RESTO, ");
-                query.Append("       ROUND(PF.QTTOTPAL * ROUND(MOD(BI.QTNF / P.QTUNITCX / PF.QTTOTPAL, 1), 6), 2) * P.QTUNITCX AS QTRESTO, CASE WHEN BC.DTFECHAMENTO IS NOT NULL THEN 'S' ELSE 'N' END FECHADO");
+                query.Append("       ROUND((PF.QTTOTPAL * MOD(BI.QTNF / P.QTUNITCX / PF.QTTOTPAL, 1)) * P.QTUNITCX, 0) AS QTRESTO, CASE WHEN BC.DTFECHAMENTO IS NOT NULL THEN 'S' ELSE 'N' END FECHADO");
                 query.Append("  FROM PCBONUSI BI INNER JOIN PCPRODUT P ON (BI.CODPROD = P.CODPROD)");
                 query.Append("                   INNER JOIN PCBONUSC BC ON (BI.NUMBONUS = BC.NUMBONUS)");
                 query.Append("                   INNER JOIN PCPRODFILIAL PF ON (P.CODPROD = PF.CODPROD AND BC.CODFILIAL = PF.CODFILIAL)");
@@ -474,10 +476,9 @@ namespace ProjetoColetorApi.Model
             }
         }
     }
-
     public class ConferenciaUma
     {
-        public int Numbonus { get; set; }
+        public int? Numbonus { get; set; }
         public int Codigouma { get; set; }
         public int Codprod { get; set; }
         public int Qtconf { get; set; }
@@ -544,13 +545,20 @@ namespace ProjetoColetorApi.Model
 
             try
             {
+                if (dados.Numbonus == null)
+                {
+                    dados.Numbonus = 0;
+                }
+
                 insereConferencia.Append("INSERT INTO TAB_ENDERECAMENTO_CONF (NUMBONUS, CODPROD, DATACONF, DATAVALIDADE, CODFUNCCONF, CODIGOUMA, QT)");
                 insereConferencia.Append($"                           VALUES ({dados.Numbonus}, {dados.Codprod}, SYSDATE, TO_DATE('{dados.Datavalidade}', 'DD/MM/YYYY'), {dados.Conferente}, {dados.Codigouma}, {dados.Qtconf})");
 
                 exec.CommandText = insereConferencia.ToString();
                 OracleDataReader insereConfUma = exec.ExecuteReader();
 
-                registraBox.Append($"UPDATE PCMOVENDPEND SET CODBOX = {dados.Numbox}, NUMBOX = {dados.Numbox} WHERE NUMBONUS = {dados.Numbonus} AND CODIGOUMA = {dados.Codigouma} AND DTESTORNO IS NULL");
+                registraBox.Append($"UPDATE PCMOVENDPEND SET CODBOX = {dados.Numbox}, NUMBOX = {dados.Numbox} ");
+                registraBox.Append($"WHERE CASE WHEN {dados.Numbonus} = 0 THEN 1 ELSE NUMBONUS END = CASE WHEN {dados.Numbonus} = 0 THEN 1 ELSE {dados.Numbonus} END AND CODIGOUMA = {dados.Codigouma} AND DTESTORNO IS NULL");
+
                 exec.CommandText = registraBox.ToString();
                 OracleDataReader insereBoxUma = exec.ExecuteReader();
 
@@ -780,12 +788,19 @@ namespace ProjetoColetorApi.Model
             OracleConnection connection = DataBase.novaConexao();
             OracleCommand exec = connection.CreateCommand();
 
+            StringBuilder reabreBonusc = new StringBuilder();
             StringBuilder reabreBonusi = new StringBuilder();
             StringBuilder reabreBonusiConf = new StringBuilder();
             StringBuilder reabreBonusiVolume = new StringBuilder();
 
             try
             {
+                reabreBonusc.Append($"UPDATE PCBONUSC SET CODFUNCRM = NULL, DATARM = NULL ");
+                reabreBonusc.Append($" WHERE NUMBONUS = {numBonus}");
+
+                exec.CommandText = reabreBonusc.ToString();
+                OracleDataReader bonusc = exec.ExecuteReader();
+
                 reabreBonusi.Append($"UPDATE PCBONUSI SET QTENTRADA = (SELECT NVL(SUM(QTENTRADA), 0) FROM PCBONUSIVOLUME WHERE NUMBONUS = {numBonus} AND CODPROD = PCBONUSI.CODPROD AND ENDERECADO = 'S'), ");
                 reabreBonusi.Append($"                    QTAVARIA = 0, DTVALIDADE = NULL WHERE NUMBONUS = {numBonus}");
 
@@ -867,6 +882,140 @@ namespace ProjetoColetorApi.Model
                 connection.Dispose();
 
                 throw new Exception(ex.ToString());
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+    }
+    public class ParametrosEndereca
+    {
+        public string Base64 { get; set; }
+        public int CodUma { get; set; }
+
+        public string ChamaImpressao(ParametrosEndereca parametros)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            try
+            {
+                var nomeArquivo = "UMA-" + parametros.CodUma + ".pdf";
+
+                // DESENVOLVIMENTO
+                // var caminho = @"C:\Projetos\Coletor\backend_c#\" + nomeArquivo;
+
+                // HOMOLOGAÇÂO
+                // var caminho = @"C:\inetpub\wwwroot\backend_homologacao\" + nomeArquivo;
+
+                // PRODUÇÃO
+                var caminho = @"C:\inetpub\wwwroot\backend\" + nomeArquivo;
+
+                // CRIA O ARQUIVO PDF COM BASE64
+                byte[] bytePdf = Convert.FromBase64String(parametros.Base64);
+
+                File.WriteAllBytes(nomeArquivo, bytePdf);
+
+                FileInfo file = new FileInfo(caminho);
+
+                if (file.Exists)
+                {
+                    // MANDA IMPRIMIR O ARQUIVO CRIADO
+                    using (var document = PdfDocument.Load(caminho))
+                    {
+                        using (var printDocument = document.CreatePrintDocument())
+                        {
+                            printDocument.PrinterSettings.PrintFileName = nomeArquivo;
+                            printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\HP_WMS5_F7"; // PASSA O NOME DA IMPRESSORA WMS
+                            // printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\hp_ti-new_f7"; // PASSA O NOME DA IMPRESSORA TI
+                            printDocument.DocumentName = nomeArquivo;
+                            printDocument.PrinterSettings.PrintFileName = nomeArquivo;
+                            printDocument.PrintController = new StandardPrintController();
+                            printDocument.Print();                            
+                        }
+                    }
+
+                    // DELETA O ARQUIVO APÓS IMPRESSÃO
+
+                    File.Delete(caminho);
+
+                    // PREENCHE O NUMVIAS 
+
+                    StringBuilder query = new StringBuilder();
+
+                    query.Append($"UPDATE PCMOVENDPEND SET NUMVIAS = NVL(NUMVIAS, 0) + 1 WHERE CODIGOUMA = {parametros.CodUma}");
+
+                    exec.CommandText = query.ToString();
+                    OracleDataReader updateVolumeUma = exec.ExecuteReader();
+                }
+
+                return "Placa(s) da U.M.A enviada(s) a impressora.";
+            }
+            catch (Exception ex)
+            {
+                return "Error:" + ex.Message;
+            }
+
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+
+        public List<int> BuscaDadosImpressao(int numBonus)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            List<int> codigosUma = new List<int>();
+            StringBuilder query = new StringBuilder();
+
+            try
+            {
+                query.Append($"SELECT CODIGOUMA FROM PCMOVENDPEND WHERE NUMBONUS = {numBonus} AND DTESTORNO IS NULL AND NVL(NUMVIAS, 0) = 0");
+
+                exec.CommandText = query.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    int codigo = new int();
+
+                    codigo = reader.GetInt32(0);
+
+                    codigosUma.Add(codigo);
+                }
+
+                connection.Close();
+
+                return codigosUma;
+
+            }
+            catch (Exception ex)
+            {
+
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    return codigosUma;
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                return codigosUma;
             }
             finally
             {

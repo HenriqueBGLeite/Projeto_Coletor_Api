@@ -106,9 +106,7 @@ namespace ProjetoColetorApi.Model
         }
         public Boolean GravaProduto(ProdutoInventario prod)
         {
-            Boolean salvou = false;
             OracleConnection connection = DataBase.novaConexao();
-            StringBuilder query = new StringBuilder();
             OracleCommand exec = new OracleCommand("STP_GERA_PROX_CONTAGEM", connection);
 
             try
@@ -142,15 +140,10 @@ namespace ProjetoColetorApi.Model
 
                 connection.Close();
 
-                salvou = true;
-
-                return salvou;
+                return true;
             }
             catch (Exception ex)
-            {
-                salvou = false;
-
-                
+            {                
                 if (connection.State == ConnectionState.Open)
                 {
                     connection.Close();
@@ -158,7 +151,7 @@ namespace ProjetoColetorApi.Model
                 exec.Dispose();
                 connection.Dispose();
 
-                return salvou;
+                return false;
             }
             finally
             {

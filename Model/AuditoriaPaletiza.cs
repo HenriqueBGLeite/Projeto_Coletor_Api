@@ -209,7 +209,7 @@ namespace ProjetoColetorApi.Model
             {
                 if (dados != null)
                 {
-                    query.Append("select os.numos, prod.codauxiliar2 as dun, qtconferida, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia as divergencia, pertenceCarga, reconferido, ");
+                    query.Append("select os.numos, prod.codauxiliar2 as dun, prod.qtunitcx, qtconferida, os.numpalete, os.numped, os.numcar, os.numbox, os.numvol, os.tipoos, os.dtconf, os.codfuncconf, os.pendencia as divergencia, pertenceCarga, reconferido, ");
                     query.Append("       (SELECT COUNT(*) AS os FROM pcmovendpend");
                     query.Append($"        WHERE numos = {dados.NumOs} AND (posicao = 'P' AND dtfimconferencia IS NULL)) AS osaberta,");
                     query.Append("       (select count(os.numvol) as divergencia");
@@ -744,7 +744,7 @@ namespace ProjetoColetorApi.Model
                 }
                 query.Append("           AND MOV.TIPOOS <> '13'");
                 query.Append("           AND MOV.DTESTORNO IS NULL");
-                query.Append("           AND MOV.DATA > SYSDATE - 30");
+                query.Append("           AND MOV.DATA > SYSDATE - 45");
 
                 query.Append("        UNION ");
 
@@ -761,7 +761,7 @@ namespace ProjetoColetorApi.Model
                 {
                     query.Append("       AND os.dtconf2 IS NULL");
                 }
-                query.Append("           AND MOV.DATA > SYSDATE - 30");
+                query.Append("           AND MOV.DATA > SYSDATE - 45");
 
                 query.Append("        UNION ");
 
@@ -771,7 +771,7 @@ namespace ProjetoColetorApi.Model
                 query.Append("           AND MOV.DTFIMCONFERENCIA IS NULL");
                 query.Append("           AND MOV.TIPOOS = 17");
                 query.Append("           AND MOV.DTESTORNO IS NULL");
-                query.Append("           AND MOV.DATA > SYSDATE - 30) TAB INNER JOIN PCTIPOOS T ON (T.CODIGO = TAB.TIPOOS)");
+                query.Append("           AND MOV.DATA > SYSDATE - 45) TAB INNER JOIN PCTIPOOS T ON (T.CODIGO = TAB.TIPOOS)");
                 query.Append($"                                           INNER JOIN (SELECT DISTINCT CODFILIAL, NUMORDEMCARGA, NUMTRANSWMS FROM PCPEDC WHERE NUMCAR = {numCar}) PED ON (TAB.NUMTRANSWMS = PED.NUMTRANSWMS AND TAB.CODFILIAL = PED.CODFILIAL)");
                 query.Append("                                            INNER JOIN PCCARREG CAR ON (TAB.NUMCAR = CAR.NUMCAR)");
                 query.Append("                                            INNER JOIN PCENDERECO EN ON (TAB.CODENDERECO = EN.CODENDERECO AND TAB.CODFILIAL = EN.CODFILIAL)");
@@ -785,6 +785,47 @@ namespace ProjetoColetorApi.Model
                 oda.Fill(pendencia);
 
                 return pendencia;
+            }
+            catch (Exception ex)
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                    throw new Exception(ex.Message);
+                }
+
+                exec.Dispose();
+                connection.Dispose();
+
+                throw new Exception(ex.Message);
+            }
+            finally
+            {
+                if (connection.State == ConnectionState.Open)
+                {
+                    connection.Close();
+                }
+                exec.Dispose();
+                connection.Dispose();
+            }
+        }
+        
+        public Boolean ReabreAuditoriaCarga(int numCar)
+        {
+            OracleConnection connection = DataBase.novaConexao();
+            OracleCommand exec = connection.CreateCommand();
+
+            StringBuilder reabre = new StringBuilder();
+
+            try
+            {
+                reabre.Append($"update pcvolumeos set dtconf2 = null, codfuncconf2 = null ");
+                reabre.Append($" where numos in (select distinct numos from pcmovendpend where numcar = {numCar} and dtestorno is null)");
+
+                exec.CommandText = reabre.ToString();
+                OracleDataReader reader = exec.ExecuteReader();
+
+                return true;
             }
             catch (Exception ex)
             {

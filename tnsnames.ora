@@ -27,14 +27,14 @@ EPC =
   )
  )
 
-TESTE-EPOCA =
-  (DESCRIPTION =
-    (ADDRESS = (PROTOCOL = TCP)(HOST = epk7X2-scan)(PORT = 1521))
-    (CONNECT_DATA =
+EPOCATST =
+   (DESCRIPTION =
+     (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.0.182)(PORT = 1521))
+      (CONNECT_DATA =
       (SERVER = DEDICATED)
-      (SERVICE_NAME = EPOCATST.epoca.dc)
+     (SERVICE_NAME = EPOCATST)
     )
-  )
+   )
 
 MRURAL = 
  (DESCRIPTION = 

@@ -148,5 +148,11 @@ namespace ProjetoColetorApi.Controllers
         {
             return new ConferenciaSaida().ReabreConferenciaOs(numos);
         }
+
+        [Route("{numOs}")]
+        public JsonResult RetornaPaleteOs(int numOs)
+        {
+            return Json(new ConferenciaSaida().RetornaPaleteOs(numOs));
+        }
     }
 }
