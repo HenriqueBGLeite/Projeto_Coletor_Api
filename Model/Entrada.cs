@@ -609,6 +609,7 @@ namespace ProjetoColetorApi.Model
             OracleCommand exec = connection.CreateCommand();
 
             StringBuilder conferenteCab = new StringBuilder();
+            StringBuilder validaPrimeiroVol = new StringBuilder();
             StringBuilder confereBonusi = new StringBuilder();
             StringBuilder confereBonusiConf = new StringBuilder();
             StringBuilder confereBonusiVolume = new StringBuilder();
@@ -637,13 +638,36 @@ namespace ProjetoColetorApi.Model
                 exec.CommandText = confereBonusiConf.ToString();
                 OracleDataReader bonusiconf = exec.ExecuteReader();
 
-                //Confere item na PCBONUSIVOLUME
-                confereBonusiVolume.Append("INSERT INTO PCBONUSIVOLUME (NUMBONUS, CODPROD, NUMLOTE, CODAGREGACAO, DTVALIDADE, QTPECAS, QTENTRADA, QTNF, TIPO, ");
-                confereBonusiVolume.Append("                            CODIGOUMA, ENDERECADO, CODMOTIVO, DTLANCAMENTO, CODFILIALESTOQUE, CODFILIALGESTAO, CODFUNCCONFERENTE)");
-                confereBonusiVolume.Append($"                   VALUES ({dados.Numbonus}, {dados.Codprod}, 1, NULL, TO_DATE('{dados.Dtvalidade}', 'DD/MM/YYYY'), 0, {dados.Qtconf}, {dados.Qtnf}, 'N', 0, 'N', 0, SYSDATE, NULL, NULL, {dados.Codfuncconf})");
+                //Verifica se é o primeiro registro
+                validaPrimeiroVol.Append($"SELECT COUNT(*) AS TOT_REG FROM PCBONUSIVOLUME WHERE NUMBONUS = {dados.Numbonus} AND CODPROD = {dados.Codprod} AND QTENTRADA = 0");
+                
+                exec.CommandText = validaPrimeiroVol.ToString();
+                OracleDataReader valida = exec.ExecuteReader();
 
-                exec.CommandText = confereBonusiVolume.ToString();
-                OracleDataReader bonusivolume = exec.ExecuteReader();
+                if (valida.Read())
+                {
+                    int primeiraConferencia = valida.GetInt32(0);
+
+                    if (primeiraConferencia > 0)
+                    {
+                        confereBonusiVolume.Append($"UPDATE PCBONUSIVOLUME SET NUMBONUS = {dados.Numbonus}, CODPROD = {dados.Codprod}, NUMLOTE = 1, CODAGREGACAO = NULL, DTVALIDADE = TO_DATE('{dados.Dtvalidade}', 'DD/MM/YYYY'), ");
+                        confereBonusiVolume.Append($"                          QTPECAS = 0, QTENTRADA = {dados.Qtconf}, QTNF = {dados.Qtnf}, TIPO = 'N', CODIGOUMA = 0, ENDERECADO = 'N', CODMOTIVO = 0, DTLANCAMENTO = SYSDATE, ");
+                        confereBonusiVolume.Append($"                          CODFILIALESTOQUE = NULL, CODFILIALGESTAO = NULL, CODFUNCCONFERENTE = {dados.Codfuncconf}");
+                        confereBonusiVolume.Append($" WHERE NUMBONUS = { dados.Numbonus } AND CODPROD = { dados.Codprod } AND QTENTRADA = 0");
+
+                        exec.CommandText = confereBonusiVolume.ToString();
+                        OracleDataReader bonusivolume = exec.ExecuteReader();
+                    } else
+                    {
+                        //Confere (inserindo) item na PCBONUSIVOLUME
+                        confereBonusiVolume.Append("INSERT INTO PCBONUSIVOLUME (NUMBONUS, CODPROD, NUMLOTE, CODAGREGACAO, DTVALIDADE, QTPECAS, QTENTRADA, QTNF, TIPO, ");
+                        confereBonusiVolume.Append("                            CODIGOUMA, ENDERECADO, CODMOTIVO, DTLANCAMENTO, CODFILIALESTOQUE, CODFILIALGESTAO, CODFUNCCONFERENTE)");
+                        confereBonusiVolume.Append($"                   VALUES ({dados.Numbonus}, {dados.Codprod}, 1, NULL, TO_DATE('{dados.Dtvalidade}', 'DD/MM/YYYY'), 0, {dados.Qtconf}, {dados.Qtnf}, 'N', 0, 'N', 0, SYSDATE, NULL, NULL, {dados.Codfuncconf})");
+
+                        exec.CommandText = confereBonusiVolume.ToString();
+                        OracleDataReader bonusivolume = exec.ExecuteReader();
+                    }
+                }
 
                 transacao.Commit();
                 return true;
@@ -932,8 +956,10 @@ namespace ProjetoColetorApi.Model
                         using (var printDocument = document.CreatePrintDocument())
                         {
                             printDocument.PrinterSettings.PrintFileName = nomeArquivo;
-                            printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\HP_WMS5_F7"; // PASSA O NOME DA IMPRESSORA WMS
+                            // printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\HP_WMS5_F7"; // PASSA O NOME DA IMPRESSORA WMS
                             // printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\hp_ti-new_f7"; // PASSA O NOME DA IMPRESSORA TI
+                            printDocument.PrinterSettings.PrinterName = "HP_WMS5_F7"; //IMPRESSORA LOCAL
+                            // printDocument.PrinterSettings.PrinterName = "hp_ti-new_f7_teste"; //IMPRESSORA LOCAL TESTE TI
                             printDocument.DocumentName = nomeArquivo;
                             printDocument.PrinterSettings.PrintFileName = nomeArquivo;
                             printDocument.PrintController = new StandardPrintController();
@@ -959,6 +985,10 @@ namespace ProjetoColetorApi.Model
             }
             catch (Exception ex)
             {
+                ConferenciaSaida enviaEmail = new ConferenciaSaida();
+
+                enviaEmail.EnviaEmail(ex.Message, "ChamaImpressao");
+
                 return "Error:" + ex.Message;
             }
 
