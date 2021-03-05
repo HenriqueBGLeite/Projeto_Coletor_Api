@@ -921,7 +921,7 @@ namespace ProjetoColetorApi.Model
     public class ParametrosEndereca
     {
         public string Base64 { get; set; }
-        public int CodUma { get; set; }
+        public string CodUma { get; set; }
 
         public string ChamaImpressao(ParametrosEndereca parametros)
         {
@@ -958,8 +958,9 @@ namespace ProjetoColetorApi.Model
                             printDocument.PrinterSettings.PrintFileName = nomeArquivo;
                             // printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\HP_WMS5_F7"; // PASSA O NOME DA IMPRESSORA WMS
                             // printDocument.PrinterSettings.PrinterName = @"\\192.168.0.189\hp_ti-new_f7"; // PASSA O NOME DA IMPRESSORA TI
-                            printDocument.PrinterSettings.PrinterName = "HP_WMS5_F7"; //IMPRESSORA LOCAL
+                             printDocument.PrinterSettings.PrinterName = "HP_WMS5_F7"; //IMPRESSORA LOCAL
                             // printDocument.PrinterSettings.PrinterName = "hp_ti-new_f7_teste"; //IMPRESSORA LOCAL TESTE TI
+
                             printDocument.DocumentName = nomeArquivo;
                             printDocument.PrinterSettings.PrintFileName = nomeArquivo;
                             printDocument.PrintController = new StandardPrintController();
@@ -975,7 +976,7 @@ namespace ProjetoColetorApi.Model
 
                     StringBuilder query = new StringBuilder();
 
-                    query.Append($"UPDATE PCMOVENDPEND SET NUMVIAS = NVL(NUMVIAS, 0) + 1 WHERE CODIGOUMA = {parametros.CodUma}");
+                    query.Append($"UPDATE PCMOVENDPEND SET NUMVIAS = NVL(NUMVIAS, 0) + 1, DTULTIMP = SYSDATE WHERE CODIGOUMA IN ({parametros.CodUma})");
 
                     exec.CommandText = query.ToString();
                     OracleDataReader updateVolumeUma = exec.ExecuteReader();
